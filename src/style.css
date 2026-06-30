@@ -1,0 +1,145 @@
+/* ==========================================================================
+   Global Native CSS Styles (Vanilla CSS Refactored)
+   ========================================================================== */
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #020617;
+  color: #e2e8f0; /* text-slate-200 */
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+/* Custom background styles for sci-fi look */
+.tech-bg {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #020617;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 136, 255, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(102, 0, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(0, 210, 255, 0.05) 0%, transparent 60%);
+  overflow: hidden;
+}
+
+/* Sci-fi grid effect */
+.tech-grid {
+  position: absolute;
+  inset: 0;
+  background-size: 60px 60px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 136, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 136, 255, 0.03) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at 50% 50%, black 70%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 70%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Floating light halos */
+.tech-light-orb-1 {
+  position: absolute;
+  top: 15%;
+  left: 20%;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(0, 136, 255, 0.08) 0%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  animation: float-orb 15s ease-in-out infinite alternate;
+}
+
+.tech-light-orb-2 {
+  position: absolute;
+  bottom: 10%;
+  right: 15%;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(102, 0, 255, 0.06) 0%, transparent 75%);
+  filter: blur(50px);
+  pointer-events: none;
+  animation: float-orb 20s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes float-orb {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(40px, -40px) scale(1.1);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* ==========================================================================
+   Element Plus Global Variables Overrides (Sci-fi Theme)
+   ========================================================================== */
+
+/* Form Item and Label Overrides */
+.el-form-item__label {
+  color: #94a3b8 !important; /* text-slate-400 */
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  margin-bottom: 6px !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  justify-content: flex-start !important;
+}
+
+/* Input component wrapper overrides */
+.el-input {
+  --el-input-bg-color: rgba(3, 7, 18, 0.5) !important;
+  --el-input-border-color: rgba(0, 136, 255, 0.18) !important;
+  --el-input-hover-border-color: rgba(0, 136, 255, 0.4) !important;
+  --el-input-focus-border-color: rgba(0, 136, 255, 0.7) !important;
+  --el-input-text-color: #ffffff !important;
+  --el-input-placeholder-color: #475569 !important;
+  --el-input-icon-color: #64748b !important;
+}
+
+.el-input__wrapper {
+  background-color: var(--el-input-bg-color) !important;
+  box-shadow: 0 0 0 1px var(--el-input-border-color) inset !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--el-input-hover-border-color) inset !important;
+}
+
+.el-input__wrapper.is-focus {
+  background-color: rgba(3, 7, 18, 0.75) !important;
+  box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset, 0 0 15px rgba(0, 136, 255, 0.25) !important;
+}
+
+.el-input__inner {
+  font-size: 14px !important;
+  color: var(--el-input-text-color) !important;
+}
+
+/* Form Validation Error Message overrides */
+.el-form-item__error {
+  color: #f43f5e !important; /* text-rose-500 */
+  font-size: 11px !important;
+  padding-top: 4px !important;
+}
+
+.el-form-item {
+  margin-bottom: 20px !important;
+}
