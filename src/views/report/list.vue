@@ -173,7 +173,7 @@ const generateRemainingMockData = () => {
   const templates = ['吉林粮模板', '上海粮科模板', '中泉模板', '安徽粮模板']
   const names = ['一级压榨花生油', '特级初榨橄榄油', '精制小麦粉', '优质大豆分离蛋白', '聚氨酯防水涂料', '发泡聚苯乙烯保温板', '混凝土抗裂纤维', '彩色路面耐磨防滑漆']
   const count = 42 - rawReportList.value.length
-  
+
   for (let i = 0; i < count; i++) {
     const comp = companyOptions[i % companyOptions.length]
     const codeNum = 202600100 + i
@@ -185,7 +185,7 @@ const generateRemainingMockData = () => {
       attachment: `${names[i % names.length]}.pdf`,
       domain: `https://${comp === '中泉' ? 'www.cttlab.com' : 'query.report'}.cn`,
       remark: '导入数据记录',
-      time: `2026-06-${25 - Math.floor(i/4)} 10:12:30`
+      time: `2026-06-${25 - Math.floor(i / 4)} 10:12:30`
     })
   }
 }
@@ -238,7 +238,7 @@ const paginatedList = computed(() => {
 const showQrCode = (row) => {
   selectedRow.value = row
   qrDialogVisible.value = true
-  
+
   nextTick(() => {
     if (!qrCanvasRef.value) return
     const qrUrl = `${row.domain}/report?reportId=${row.code}`
@@ -271,7 +271,7 @@ const handleDelete = (row) => {
       type: 'success',
       message: '报告记录删除成功！'
     })
-  }).catch(() => {})
+  }).catch(() => { })
 }
 
 // 编辑按钮占位
@@ -287,7 +287,7 @@ const handleAdd = () => {
 
 <template>
   <div class="report-list-container">
-    
+
     <!-- 顶部查询筛选面板 -->
     <div class="filter-panel">
       <el-form :inline="true" :model="queryParams" class="filter-form">
@@ -367,27 +367,15 @@ const handleAdd = () => {
 
     <!-- 底侧分页控制组件 -->
     <footer class="pagination-footer">
-      <el-pagination
-        v-model:current-page="currentPage"
-        v-model:page-size="pageSize"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="filteredList.length"
-        class="pagination-bar"
-      />
+      <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next, jumper" :total="filteredList.length" class="pagination-bar" />
     </footer>
 
     <!-- 二维码明细查看对话框 -->
-    <el-dialog
-      v-model="qrDialogVisible"
-      title="报告防伪二维码"
-      width="400px"
-      align-center
-      class="qr-dialog font-sans"
-    >
+    <el-dialog v-model="qrDialogVisible" title="报告防伪二维码" width="400px" align-center class="qr-dialog font-sans">
       <div class="qr-dialog-body" v-if="selectedRow">
         <canvas ref="qrCanvasRef" class="qr-canvas"></canvas>
-        
+
         <div class="qr-details">
           <div class="detail-item">
             <span class="detail-label">报告名称：</span>
@@ -489,6 +477,7 @@ const handleAdd = () => {
 
 .data-table {
   font-size: 13px;
+  font-weight: 500;
 }
 
 .attachment-link {

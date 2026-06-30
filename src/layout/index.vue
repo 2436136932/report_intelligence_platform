@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '../store/modules/user'
+import { useUserStore } from '@/store/modules/user'
 import {
   LayoutDashboard,
   Building2,
@@ -51,8 +51,8 @@ const menuItems = [
     icon: FolderLock,
     hasSub: true,
     children: [
-      { path: '/report/list', name: '报告列表' },
-      { path: '/report/query', name: '报告查询' }
+      { path: '/report/list', name: '报告列表', icon: FileText },
+      { path: '/report/query', name: '报告查询', icon: Search }
     ]
   }
 ]
@@ -131,7 +131,7 @@ const toggleReportMenu = () => {
               <div v-show="isReportExpanded && !isCollapsed" class="submenu-list">
                 <router-link v-for="sub in item.children" :key="sub.path" :to="sub.path"
                   :class="['submenu-item', { 'is-sub-active': activePath === sub.path }]">
-                  <span class="sub-dot"></span>
+                  <component :is="sub.icon" class="submenu-icon" />
                   <span class="submenu-label">{{ sub.name }}</span>
                 </router-link>
               </div>
@@ -181,8 +181,8 @@ const toggleReportMenu = () => {
 
           <el-dropdown trigger="click" @command="handleLogout">
             <div class="user-profile">
-              <span class="user-avatar font-mono">{{ username[0].toUpperCase() }}</span>
-              <span class="user-name">{{ username }}</span>
+              <span class="user-avatar font-mono">{{ userStore.userInfo?.username[0].toUpperCase() }}</span>
+              <span class="user-name">{{ userStore.userInfo?.username || userStore.userInfo?.name || '未登录' }}</span>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
@@ -260,7 +260,8 @@ const toggleReportMenu = () => {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background-color: #3b82f6;
+  background: url('./src/assets/images/logo.png') no-repeat center center;
+  background-size: cover;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,17 +389,20 @@ const toggleReportMenu = () => {
   color: #ffffff;
 }
 
-.sub-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background-color: #cbd5e1;
+.submenu-icon {
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
-  transition: background-color 0.2s;
+  color: #64748b;
+  transition: color 0.2s;
 }
 
-.submenu-item.is-sub-active .sub-dot {
-  background-color: #ffffff;
+.submenu-item.is-sub-active .submenu-icon {
+  color: #ffffff;
+}
+
+.submenu-item:hover .submenu-icon {
+  color: #1e293b;
 }
 
 /* 子菜单展开/收起动画 */

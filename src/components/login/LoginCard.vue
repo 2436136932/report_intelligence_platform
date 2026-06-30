@@ -11,7 +11,7 @@ const router = useRouter()
 
 // 表单响应式数据
 const form = ref({
-  username: 'admin',
+  username: '',
   password: '',
   captcha: ''
 })
@@ -66,13 +66,13 @@ const rules = {
 
 const handleLogin = () => {
   if (!loginFormRef.value) return
-  
+
   loginFormRef.value.validate(async (valid) => {
     if (!valid) return
-    
+
     isSubmitting.value = true
     successMsg.value = ''
-    
+
     try {
       await userStore.login({
         username: form.value.username,
@@ -109,7 +109,7 @@ const handleLogin = () => {
   <div class="login-card-container">
     <!-- 卡片上沿科技蓝高光装饰条 -->
     <div class="card-glow-line"></div>
-    
+
     <!-- 卡片头部标语与标题 -->
     <div class="card-header">
       <div class="card-welcome font-mono">WELCOME BACK</div>
@@ -118,15 +118,8 @@ const handleLogin = () => {
     </div>
 
     <!-- Element Plus 表单 -->
-    <el-form 
-      ref="loginFormRef" 
-      :model="form" 
-      :rules="rules"
-      label-position="top"
-      hide-required-asterisk
-      class="login-form"
-      @submit.prevent="handleLogin"
-    >
+    <el-form ref="loginFormRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk
+      class="login-form" @submit.prevent="handleLogin">
       <!-- 登录成功反馈 -->
       <div v-if="successMsg" class="success-banner font-sans">
         <span class="success-dot animate-pulse"></span>
@@ -135,11 +128,7 @@ const handleLogin = () => {
 
       <!-- 账号表单项 -->
       <el-form-item label="账号" prop="username">
-        <el-input 
-          v-model="form.username" 
-          placeholder="请输入账号" 
-          :disabled="isSubmitting"
-        >
+        <el-input v-model="form.username" placeholder="请输入账号" :disabled="isSubmitting">
           <template #prefix>
             <User class="input-icon" />
           </template>
@@ -148,13 +137,7 @@ const handleLogin = () => {
 
       <!-- 密码表单项 -->
       <el-form-item label="密码" prop="password">
-        <el-input 
-          v-model="form.password" 
-          type="password" 
-          placeholder="请输入密码" 
-          show-password
-          :disabled="isSubmitting"
-        >
+        <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password :disabled="isSubmitting">
           <template #prefix>
             <Lock class="input-icon" />
           </template>
@@ -164,29 +147,16 @@ const handleLogin = () => {
       <!-- 验证码表单项 -->
       <el-form-item label="验证码" prop="captcha">
         <div class="captcha-row">
-          <el-input 
-            v-model="form.captcha" 
-            placeholder="请输入验证码" 
-            maxlength="5"
-            :disabled="isSubmitting"
-            class="captcha-input-field"
-          />
+          <el-input v-model="form.captcha" placeholder="请输入验证码" maxlength="5" :disabled="isSubmitting"
+            class="captcha-input-field" />
           <!-- Canvas 验证码子组件 -->
-          <LoginCaptcha 
-            ref="captchaRef" 
-            @change="onCaptchaChange" 
-          />
+          <LoginCaptcha ref="captchaRef" @change="onCaptchaChange" />
         </div>
       </el-form-item>
 
       <!-- 登录提交按钮 -->
       <div class="submit-container">
-        <el-button 
-          type="primary" 
-          :loading="isSubmitting"
-          class="btn-submit"
-          native-type="submit"
-        >
+        <el-button type="primary" :loading="isSubmitting" class="btn-submit" native-type="submit">
           <span class="btn-inner">
             进入系统
             <ArrowRight class="btn-arrow" />
@@ -205,11 +175,12 @@ const handleLogin = () => {
   max-width: 400px;
   padding: 32px;
   border-radius: 20px;
-  background-color: rgba(3, 7, 18, 0.45); /* 黑色背景半透明模糊 */
+  background-color: rgba(3, 7, 18, 0.45);
+  /* 黑色背景半透明模糊 */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(0, 136, 255, 0.15);
-  box-shadow: 
+  box-shadow:
     0 10px 30px -10px rgba(0, 0, 0, 0.7),
     inset 0 1px 1px rgba(255, 255, 255, 0.05),
     0 0 40px rgba(0, 136, 255, 0.08);
@@ -232,7 +203,8 @@ const handleLogin = () => {
 .card-welcome {
   font-size: 10px;
   font-weight: 700;
-  color: #64748b; /* text-slate-500 */
+  color: #64748b;
+  /* text-slate-500 */
   letter-spacing: 0.15em;
   margin-bottom: 4px;
 }
@@ -247,7 +219,8 @@ const handleLogin = () => {
 .card-subtitle {
   margin: 0;
   font-size: 12px;
-  color: #94a3b8; /* text-slate-400 */
+  color: #94a3b8;
+  /* text-slate-400 */
 }
 
 .login-form {
@@ -343,9 +316,12 @@ const handleLogin = () => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -359,6 +335,7 @@ const handleLogin = () => {
   .login-card-container {
     padding: 24px;
   }
+
   .card-title {
     font-size: 20px;
   }

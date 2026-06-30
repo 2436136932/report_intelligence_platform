@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { loginRequest } from '../../api/auth'
+import { loginRequest } from '@/api/auth'
 
 export const useUserStore = defineStore('user', () => {
   // State: 初始状态均置空，持久化插件在加载时会自动从缓存中恢复对应的值

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useUserStore } from '../../store/modules/user'
+import { useUserStore } from '@/store/modules/user'
 import * as echarts from 'echarts'
 import {
   FileText,
@@ -24,8 +24,12 @@ const barChartRef = ref(null)
 let chartInstances = []
 
 // 日期与操作员计算
-const currentDateString = ref('2026/06/30')
-const operatorCode = ref('ahlj283172239')
+const currentDateString = ref(new Date().toLocaleDateString('zh-CN', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+}).replace(/\//g, '/'))
+const operatorCode = ref(userStore.userInfo?.username || userStore.userInfo?.name || '未登录')
 
 // 最新报告列表死数据（完美还原截图）
 const recentReportsList = ref([
@@ -261,7 +265,7 @@ onUnmounted(() => {
 
 <template>
   <div class="dashboard-container font-sans">
-    
+
     <!-- 业务看板头部卡片 -->
     <header class="welcome-card">
       <div class="welcome-tag">
@@ -340,7 +344,7 @@ onUnmounted(() => {
         </div>
         <div class="panel-body has-sidebar">
           <div ref="doughnutChartRef" class="doughnut-container"></div>
-          
+
           <div class="doughnut-sidebar">
             <div class="sidebar-item">
               <span class="item-bar is-blue"></span>
@@ -559,10 +563,25 @@ onUnmounted(() => {
 }
 
 /* KPI 色彩主题与截图一致 */
-.kpi-icon-wrapper.is-blue { background-color: #eff6ff; color: #3b82f6; }
-.kpi-icon-wrapper.is-green { background-color: #f0fdf4; color: #10b981; }
-.kpi-icon-wrapper.is-orange { background-color: #fff7ed; color: #f97316; }
-.kpi-icon-wrapper.is-red { background-color: #fef2f2; color: #ef4444; }
+.kpi-icon-wrapper.is-blue {
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
+.kpi-icon-wrapper.is-green {
+  background-color: #f0fdf4;
+  color: #10b981;
+}
+
+.kpi-icon-wrapper.is-orange {
+  background-color: #fff7ed;
+  color: #f97316;
+}
+
+.kpi-icon-wrapper.is-red {
+  background-color: #fef2f2;
+  color: #ef4444;
+}
 
 .kpi-info {
   display: flex;
@@ -629,7 +648,8 @@ onUnmounted(() => {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #3b82f6; /* 大厂科技蓝副标题 */
+  color: #3b82f6;
+  /* 大厂科技蓝副标题 */
   display: flex;
   align-items: center;
   gap: 6px;
@@ -707,10 +727,21 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.item-bar.is-blue { background-color: #3b82f6; }
-.item-bar.is-red { background-color: #ef4444; }
-.item-bar.is-green { background-color: #10b981; }
-.item-bar.is-orange { background-color: #f97316; }
+.item-bar.is-blue {
+  background-color: #3b82f6;
+}
+
+.item-bar.is-red {
+  background-color: #ef4444;
+}
+
+.item-bar.is-green {
+  background-color: #10b981;
+}
+
+.item-bar.is-orange {
+  background-color: #f97316;
+}
 
 .item-text {
   display: flex;
@@ -810,6 +841,7 @@ onUnmounted(() => {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .chart-panel.is-double,
   .chart-panel.is-single,
   .chart-panel {
@@ -821,17 +853,21 @@ onUnmounted(() => {
   .kpi-grid {
     grid-template-columns: 1fr;
   }
+
   .panel-body.has-sidebar {
     flex-direction: column;
   }
+
   .doughnut-container {
     width: 100%;
   }
+
   .doughnut-sidebar {
     width: 100%;
     padding-left: 0;
     margin-top: 12px;
   }
+
   .quick-grid {
     grid-template-columns: 1fr;
   }

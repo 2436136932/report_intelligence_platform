@@ -16,7 +16,8 @@ export function loginRequest(data) {
           data: {
             token: 'mock_token_123456',
             userInfo: {
-              name: '管理员',
+              username: 'admin',
+              name: 'admin',
               avatar: ''
             }
           }
