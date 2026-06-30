@@ -1,8 +1,4 @@
-<script setup>
-import LoginView from './views/login/index.vue'
-</script>
-
 <template>
-  <!-- 挂载登录视图入口 -->
-  <LoginView />
+  <!-- 路由总视图出口 -->
+  <router-view />
 </template>

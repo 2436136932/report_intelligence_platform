@@ -86,11 +86,11 @@ body {
 }
 
 /* ==========================================================================
-   Element Plus Global Variables Overrides (Sci-fi Theme)
+   Element Plus Variables Overrides (Sci-fi Theme Scoped to Login Page)
    ========================================================================== */
 
-/* Form Item and Label Overrides */
-.el-form-item__label {
+/* Form Item and Label Overrides inside Login */
+.login-view-wrapper .el-form-item__label {
   color: #94a3b8 !important; /* text-slate-400 */
   font-size: 12px !important;
   font-weight: 600 !important;
@@ -100,8 +100,8 @@ body {
   justify-content: flex-start !important;
 }
 
-/* Input component wrapper overrides */
-.el-input {
+/* Input component wrapper overrides inside Login */
+.login-view-wrapper .el-input {
   --el-input-bg-color: rgba(3, 7, 18, 0.5) !important;
   --el-input-border-color: rgba(0, 136, 255, 0.18) !important;
   --el-input-hover-border-color: rgba(0, 136, 255, 0.4) !important;
@@ -111,7 +111,7 @@ body {
   --el-input-icon-color: #64748b !important;
 }
 
-.el-input__wrapper {
+.login-view-wrapper .el-input__wrapper {
   background-color: var(--el-input-bg-color) !important;
   box-shadow: 0 0 0 1px var(--el-input-border-color) inset !important;
   border-radius: 8px !important;
@@ -119,27 +119,27 @@ body {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.el-input__wrapper:hover {
+.login-view-wrapper .el-input__wrapper:hover {
   box-shadow: 0 0 0 1px var(--el-input-hover-border-color) inset !important;
 }
 
-.el-input__wrapper.is-focus {
+.login-view-wrapper .el-input__wrapper.is-focus {
   background-color: rgba(3, 7, 18, 0.75) !important;
   box-shadow: 0 0 0 1px var(--el-input-focus-border-color) inset, 0 0 15px rgba(0, 136, 255, 0.25) !important;
 }
 
-.el-input__inner {
+.login-view-wrapper .el-input__inner {
   font-size: 14px !important;
   color: var(--el-input-text-color) !important;
 }
 
-/* Form Validation Error Message overrides */
-.el-form-item__error {
+/* Form Validation Error Message overrides inside Login */
+.login-view-wrapper .el-form-item__error {
   color: #f43f5e !important; /* text-rose-500 */
   font-size: 11px !important;
   padding-top: 4px !important;
 }
 
-.el-form-item {
+.login-view-wrapper .el-form-item {
   margin-bottom: 20px !important;
 }

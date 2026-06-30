@@ -1,10 +1,13 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { User, Lock, ArrowRight } from 'lucide-vue-next'
-import { ElMessage } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { isValidUsername, isValidPassword } from '@/utils/validate'
 import { useUserStore } from '@/store/modules/user'
 import LoginCaptcha from '@/components/login/LoginCaptcha.vue'
+
+const router = useRouter()
 
 // 表单响应式数据
 const form = ref({
@@ -75,9 +78,24 @@ const handleLogin = () => {
         username: form.value.username,
         password: form.value.password
       })
+      ElNotification({
+        title: '登录成功',
+        message: '欢迎回来，正在进入系统...',
+        type: 'success',
+        duration: 3000
+      })
       successMsg.value = '登录成功，正在进入系统...'
+      // 延迟 1 秒后自动跳转至后台主页，体验更平滑
+      setTimeout(() => {
+        router.push('/')
+      }, 1000)
     } catch (err) {
-      ElMessage.error(err.message || '登录失败，请检查账号密码')
+      ElNotification({
+        title: '登录失败',
+        message: err.message || '账号不存在或密码错误，请使用默认账号 admin 密码 123456 登录',
+        type: 'error',
+        duration: 4000
+      })
       form.value.captcha = ''
       captchaRef.value?.refresh()
     } finally {

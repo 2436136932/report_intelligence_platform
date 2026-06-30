@@ -8,7 +8,7 @@
 export function loginRequest(data) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      const { username } = data
+      const { username, password } = data
       // 仅当用户名为 admin 时模拟登录成功，否则模拟拒绝登录以验证报错行为
       if (username === 'admin' && password === '123456') {
         resolve({
