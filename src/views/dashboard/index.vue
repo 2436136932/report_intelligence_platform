@@ -149,7 +149,8 @@ const initDoughnutChart = () => {
       {
         name: '附件覆盖率',
         type: 'pie',
-        radius: ['60%', '80%'],
+        radius: ['55%', '75%'],
+        center: ['50%', '50%'],
         avoidLabelOverlap: false,
         label: { show: false },
         emphasis: { label: { show: false } },
@@ -703,6 +704,7 @@ onUnmounted(() => {
 .doughnut-container {
   width: 50%;
   height: 200px;
+  overflow: hidden;
 }
 
 .doughnut-sidebar {

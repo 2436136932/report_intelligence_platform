@@ -432,14 +432,14 @@ const handleAdd = () => {
 }
 
 .search-btn {
-  background-color: #3b82f6 !important;
-  border-color: #3b82f6 !important;
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
   font-weight: 500;
 }
 
 .search-btn:hover {
-  background-color: #2563eb !important;
-  border-color: #2563eb !important;
+  background-color: var(--el-color-primary-light-3) !important;
+  border-color: var(--el-color-primary-light-3) !important;
 }
 
 .reset-btn {
@@ -461,8 +461,8 @@ const handleAdd = () => {
 }
 
 .add-btn {
-  background-color: #3b82f6 !important;
-  border-color: #3b82f6 !important;
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
   font-weight: 500;
 }
 
@@ -484,7 +484,7 @@ const handleAdd = () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #3b82f6;
+  color: var(--el-color-primary);
   font-weight: 500;
 }
 
@@ -572,6 +572,6 @@ const handleAdd = () => {
 }
 
 .url-text {
-  color: #3b82f6;
+  color: var(--el-color-primary);
 }
 </style>

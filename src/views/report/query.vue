@@ -484,8 +484,8 @@ onMounted(() => {
 }
 
 .search-btn {
-  background-color: #3b82f6 !important;
-  border-color: #3b82f6 !important;
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
   font-weight: 500;
   font-size: 12px;
 }
@@ -521,8 +521,8 @@ onMounted(() => {
 
 /* 选中行高亮颜色优化 */
 .data-table :deep(.current-row td.el-table__cell) {
-  background-color: #eff6ff !important;
-  color: #1d4ed8;
+  background-color: var(--el-color-primary-light-9) !important;
+  color: var(--el-color-primary) !important;
   font-weight: 500;
 }
 
@@ -578,9 +578,9 @@ onMounted(() => {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #2563eb;
+  background-color: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-5);
+  color: var(--el-color-primary);
   border-radius: 4px;
   flex-shrink: 0;
 }
@@ -629,14 +629,14 @@ onMounted(() => {
 }
 
 .url-text {
-  color: #3b82f6;
+  color: var(--el-color-primary);
 }
 
 .pdf-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #3b82f6;
+  color: var(--el-color-primary);
   text-decoration: none;
   font-weight: 500;
 }
@@ -689,7 +689,7 @@ onMounted(() => {
   top: 2px;
   bottom: 2px;
   width: 3px;
-  background-color: #3b82f6;
+  background-color: var(--el-color-primary);
   border-radius: 1px;
 }
 

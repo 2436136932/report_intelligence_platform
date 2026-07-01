@@ -143,3 +143,203 @@ body {
 .login-view-wrapper .el-form-item {
   margin-bottom: 20px !important;
 }
+
+/* ==========================================================================
+   Dark Theme & Accessibility Overrides (Vanilla CSS)
+   ========================================================================== */
+.dark-theme {
+  --el-bg-color: #0b1329 !important;
+  --el-bg-color-overlay: #0f1a30 !important;
+  --el-text-color-primary: #f8fafc !important;
+  --el-text-color-regular: #cbd5e1 !important;
+  --el-text-color-secondary: #94a3b8 !important;
+  --el-border-color: #1e293b !important;
+  --el-border-color-light: #1e293b !important;
+  --el-border-color-lighter: #1e293b !important;
+  --el-fill-color-blank: #0f1a30 !important;
+}
+
+/* 强制覆盖暗色下表格和布局背景 */
+.dark-theme .layout-container {
+  background-color: #070d19 !important;
+}
+
+.dark-theme .sidebar {
+  background-color: #0c1524 !important;
+  border-right-color: #1e293b !important;
+}
+
+.dark-theme .sidebar-logo {
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-theme .logo-text {
+  color: #f8fafc !important;
+}
+
+.dark-theme .menu-item {
+  color: #94a3b8 !important;
+}
+
+.dark-theme .menu-item:hover {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.dark-theme .submenu-item {
+  color: #94a3b8 !important;
+}
+
+.dark-theme .submenu-item:hover {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.dark-theme .sidebar-footer {
+  border-top-color: #1e293b !important;
+}
+
+.dark-theme .header-bar {
+  background-color: #0f1a30 !important;
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-theme .route-title,
+.dark-theme .child-breadcrumb {
+  color: #f8fafc !important;
+}
+
+.dark-theme .tag-bar {
+  background-color: #0f1a30 !important;
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-theme .tag-item {
+  background-color: #0f1a30 !important;
+  border-color: #1e293b !important;
+  color: #94a3b8 !important;
+}
+
+.dark-theme .tag-item.is-active {
+  background-color: #1d4ed8 !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.dark-theme .user-profile:hover {
+  background-color: #1e293b !important;
+}
+
+.dark-theme .user-name {
+  color: #cbd5e1 !important;
+}
+
+.dark-theme .user-avatar {
+  background-color: #1e3a8a !important;
+  color: #60a5fa !important;
+}
+
+/* 各页面卡片容器暗色覆盖 */
+.dark-theme .filter-panel,
+.dark-theme .table-wrapper,
+.dark-theme .pagination-footer,
+.dark-theme .details-card,
+.dark-theme .quick-card,
+.dark-theme .welcome-card,
+.dark-theme .chart-card {
+  background-color: #0f1a30 !important;
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.dark-theme .info-lbl {
+  background-color: #0c1524 !important;
+  border-right-color: #1e293b !important;
+}
+
+.dark-theme .info-row {
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-theme .meta-grid {
+  background-color: #0c1524 !important;
+  border-color: #1e293b !important;
+}
+
+.dark-theme .details-title {
+  color: #f8fafc !important;
+}
+
+/* 暗色下原生和 EPlus 输入框 */
+.dark-theme .el-input__wrapper {
+  background-color: #0c1524 !important;
+  box-shadow: 0 0 0 1px #1e293b inset !important;
+}
+
+.dark-theme .el-input__inner {
+  color: #f8fafc !important;
+}
+
+.dark-theme .el-select__wrapper {
+  background-color: #0c1524 !important;
+  box-shadow: 0 0 0 1px #1e293b inset !important;
+}
+
+.dark-theme .el-select-dropdown__item {
+  color: #cbd5e1 !important;
+}
+
+.dark-theme .el-select-dropdown__item.is-hovering {
+  background-color: #1e293b !important;
+}
+
+/* 按钮在暗色下的底色 */
+.dark-theme .reset-btn,
+.dark-theme .collapse-btn,
+.dark-theme .tool-btn {
+  color: #cbd5e1 !important;
+  border-color: #1e293b !important;
+}
+
+.dark-theme .reset-btn:hover,
+.dark-theme .collapse-btn:hover,
+.dark-theme .tool-btn:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* 表格在暗色下的样式 */
+.dark-theme .el-table {
+  --el-table-border-color: #1e293b !important;
+  --el-table-header-bg-color: #0c1524 !important;
+  --el-table-tr-bg-color: #0f1a30 !important;
+  background-color: #0f1a30 !important;
+}
+
+.dark-theme .el-table td.el-table__cell,
+.dark-theme .el-table th.el-table__cell {
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-theme .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background-color: #0c1524 !important;
+}
+
+.dark-theme .el-table__body tr.current-row td.el-table__cell {
+  background-color: #1e3a8a !important;
+  color: #60a5fa !important;
+}
+
+.dark-theme .el-table__body tr.el-table__row:hover td.el-table__cell {
+  background-color: #1e293b !important;
+}
+
+/* 动态滤镜控制项 */
+.gray-mode-active {
+  filter: grayscale(100%) !important;
+}
+
+.color-weak-mode-active {
+  filter: sepia(0.2) saturate(1.1) hue-rotate(330deg) !important;
+}
+

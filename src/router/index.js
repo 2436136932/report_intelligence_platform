@@ -21,13 +21,13 @@ const routes = [
       {
         path: 'company',
         name: 'Company',
-        component: () => import('../views/dashboard/index.vue'), // 临时重定向回首页或做占位展示
+        component: () => import('../views/company/index.vue'),
         meta: { title: '公司管理' }
       },
       {
         path: 'template',
         name: 'Template',
-        component: () => import('../views/dashboard/index.vue'),// 临时重定向回首页或做占位展示
+        component: () => import('../views/template/index.vue'),
         meta: { title: '模板管理' }
       },
       {
