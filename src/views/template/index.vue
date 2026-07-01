@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search as SearchIcon,
@@ -14,41 +14,106 @@ import {
 
 import { storeToRefs } from 'pinia'
 import { useTemplateStore } from '@/store/modules/template'
+import { getTemplateList, insertTemplate, updateTemplate } from '@/api/template'
 
 const templateStore = useTemplateStore()
-const { templates: templateList } = storeToRefs(templateStore)
+
+// 列表数据 & 加载态
+const templateList = ref([])
+const totalCount = ref(0)
+const isLoading = ref(false)
+const isSaving = ref(false)
 
 // 搜索筛选状态
 const filterName = ref('')
 const filterCode = ref('')
 
-const filteredList = computed(() => {
-  const nameQuery = filterName.value.trim().toLowerCase()
-  const codeQuery = filterCode.value.trim().toLowerCase()
-  return templateList.value.filter(item => {
-    const matchName = !nameQuery || item.name.toLowerCase().includes(nameQuery)
-    const matchCode = !codeQuery || (item.code && item.code.toLowerCase().includes(codeQuery))
-    return matchName && matchCode
-  })
-})
-
 // 分页状态
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-const paginatedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredList.value.slice(start, end)
+// 从后端拉取模板列表（带分页 & 过滤参数）
+const fetchTemplateList = async () => {
+  isLoading.value = true
+  try {
+    const result = await getTemplateList({
+      pageNo: currentPage.value,
+      pageSize: pageSize.value,
+      name: filterName.value.trim(),
+      code: filterCode.value.trim()
+    })
+    if (result && result.code === 200 && result.data) {
+      // 同时更新 store 缓存（供公司管理页模板下拉框使用）
+      const list = Array.isArray(result.data.list) ? result.data.list : []
+      templateList.value = list.map(item => ({
+        id: item.id,
+        name: item.name || '',
+        code: item.code || '',
+        description: item.description || '',
+        fields: Array.isArray(item.templateFields) ? item.templateFields.map(f => {
+          let optionsStr = ''
+          if (f.options) {
+            if (Array.isArray(f.options)) {
+              optionsStr = f.options.join('\n')
+            } else if (typeof f.options === 'string') {
+              const trimmed = f.options.trim()
+              if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                try {
+                  const parsed = JSON.parse(trimmed)
+                  optionsStr = Array.isArray(parsed) ? parsed.join('\n') : f.options
+                } catch (e) {
+                  optionsStr = f.options
+                }
+              } else {
+                optionsStr = f.options
+              }
+            } else {
+              optionsStr = String(f.options)
+            }
+          }
+          return {
+            id: f.id,
+            templateId: f.templateId,
+            label: f.fieldName || '',
+            fieldKey: f.keyName || '',
+            fieldType: f.fieldType || 'text',
+            required: f.isrequerd === 1 || f.isrequerd === true,
+            sort: f.ordby || 1,
+            options: optionsStr,
+            defaultValue: f.defvalue || '',
+            placeholder: f.fieldPrompt || ''
+          }
+        }) : []
+      }))
+      totalCount.value = result.data.total || list.length
+      // 同步更新 store 供下拉框使用
+      templateStore.templates = templateList.value
+    } else {
+      ElMessage.error(result?.msg || '获取模板列表失败')
+    }
+  } catch (err) {
+    console.error('获取模板列表失败:', err)
+    ElMessage.error(err.message || '获取模板列表失败，请检查网络或联系管理员')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchTemplateList()
 })
+
+const paginatedList = computed(() => templateList.value)
 
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  fetchTemplateList()
 }
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
+  fetchTemplateList()
 }
 
 // 表格多选行
@@ -60,7 +125,7 @@ const handleSelectionChange = (val) => {
 // 搜索查询
 const handleQuery = () => {
   currentPage.value = 1
-  ElMessage.success('已筛选符合条件的模板记录')
+  fetchTemplateList()
 }
 
 // 重置查询
@@ -68,7 +133,7 @@ const handleReset = () => {
   filterName.value = ''
   filterCode.value = ''
   currentPage.value = 1
-  ElMessage.success('已重置筛选条件')
+  fetchTemplateList()
 }
 
 // 抽屉展开状态
@@ -151,7 +216,7 @@ const handleRemoveField = (index) => {
 
 // 保存模板数据
 const handleSave = () => {
-  formRef.value?.validate((valid) => {
+  formRef.value?.validate(async (valid) => {
     if (valid) {
       // 字段规则初步拦截校验
       for (let i = 0; i < form.fields.length; i++) {
@@ -166,51 +231,82 @@ const handleSave = () => {
         }
       }
 
-      const nowStr = new Date().toISOString().replace('Z', '+08:00') // 符合时区的ISO表达
-      if (isEdit.value) {
-        // 编辑更新
-        const index = templateList.value.findIndex(item => item.id === form.id)
-        if (index !== -1) {
-          const oldTpl = templateList.value[index]
-          templateList.value[index] = {
-            ...oldTpl,
+      isSaving.value = true
+      try {
+        if (isEdit.value) {
+          // 编辑更新
+          const payload = {
+            id: form.id,
             name: form.name,
-            code: form.code,
-            description: form.description,
-            updatedAt: nowStr,
-            fields: form.fields.map((f, i) => ({
-              ...f,
-              id: f.id > 1000000000 ? Math.floor(Math.random() * 500) + 200 : f.id, // 处理临时生成的 id
-              templateId: form.id,
-              updatedAt: nowStr,
-              createdAt: f.createdAt || nowStr
-            }))
+            code: form.code || null,
+            msg: null,
+            templateFields: form.fields.map((f, index) => {
+              const isSelect = f.fieldType === 'select'
+              const finalOptions = isSelect
+                ? (f.options ? f.options.split('\n').map(o => o.trim()).filter(Boolean) : [])
+                : (f.options || '')
+              return {
+                id: (!f.id || f.id > 1000000000) ? undefined : f.id,
+                templateId: form.id,
+                fieldName: f.label || '',
+                keyName: f.fieldKey || '',
+                fieldType: f.fieldType || 'text',
+                isrequerd: f.required ? 1 : 2,
+                fieldPrompt: f.placeholder || null,
+                defvalue: f.defaultValue || null,
+                fieldValue: null,
+                ordby: f.sort || (index + 1),
+                options: finalOptions
+              }
+            })
           }
-          ElMessage.success('保存成功')
+          const result = await updateTemplate(payload)
+          if (result && result.code === 200) {
+            ElMessage.success('更新成功')
+            isDrawerOpen.value = false
+            fetchTemplateList()
+          } else {
+            ElMessage.error(result.msg || '更新失败')
+          }
+        } else {
+          // 新增添加
+          const payload = {
+            name: form.name,
+            code: form.code || null,
+            msg: null,
+            templateFields: form.fields.map((f, index) => {
+              const isSelect = f.fieldType === 'select'
+              const finalOptions = isSelect
+                ? (f.options ? f.options.split('\n').map(o => o.trim()).filter(Boolean) : [])
+                : (f.options || '')
+              return {
+                fieldName: f.label || '',
+                keyName: f.fieldKey || '',
+                fieldType: f.fieldType || 'text',
+                isrequerd: f.required ? 1 : 2,
+                fieldPrompt: f.placeholder || null,
+                defvalue: f.defaultValue || null,
+                fieldValue: null,
+                ordby: f.sort || (index + 1),
+                options: finalOptions
+              }
+            })
+          }
+          const result = await insertTemplate(payload)
+          if (result && result.code === 200) {
+            ElMessage.success('新增成功')
+            isDrawerOpen.value = false
+            fetchTemplateList()
+          } else {
+            ElMessage.error(result.msg || '新增失败')
+          }
         }
-      } else {
-        // 新增添加
-        const maxId = templateList.value.reduce((max, item) => item.id > max ? item.id : max, 0)
-        const newTplId = maxId + 1
-        const newTpl = {
-          id: newTplId,
-          name: form.name,
-          code: form.code,
-          description: form.description,
-          createdAt: nowStr,
-          updatedAt: nowStr,
-          fields: form.fields.map((f, i) => ({
-            ...f,
-            id: f.id > 1000000000 ? Math.floor(Math.random() * 500) + 200 : f.id,
-            templateId: newTplId,
-            createdAt: nowStr,
-            updatedAt: nowStr
-          }))
-        }
-        templateList.value.unshift(newTpl)
-        ElMessage.success('新增成功')
+      } catch (err) {
+        console.error('保存模板数据失败:', err)
+        ElMessage.error(err.message || '操作失败，请检查网络或联系管理员')
+      } finally {
+        isSaving.value = false
       }
-      isDrawerOpen.value = false
     }
   })
 }
@@ -469,7 +565,7 @@ const handleImportUploadChange = (uploadFile) => {
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, sizes, prev, pager, next, jumper"
-          :total="filteredList.length"
+          :total="totalCount"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
@@ -521,7 +617,7 @@ const handleImportUploadChange = (uploadFile) => {
           <span class="drawer-main-title">{{ isEdit ? '编辑模板' : '新增模板' }}</span>
           <div class="drawer-header-actions">
             <el-button @click="isDrawerOpen = false" class="drawer-cancel-btn">取消</el-button>
-            <el-button type="primary" class="drawer-confirm-btn" @click="handleSave">确定</el-button>
+            <el-button type="primary" :loading="isSaving" class="drawer-confirm-btn" @click="handleSave">确定</el-button>
           </div>
         </div>
       </template>
@@ -646,7 +742,7 @@ const handleImportUploadChange = (uploadFile) => {
 }
 
 .filter-card {
-  background-color: var(--el-bg-color, #ffffff);
+  background-color: var(--el-bg-color, transparent);
   border: 1px solid var(--el-border-color-light, #e2e8f0);
   border-radius: 8px;
   padding: 18px 24px;
@@ -724,7 +820,7 @@ const handleImportUploadChange = (uploadFile) => {
 }
 
 .table-card {
-  background-color: var(--el-bg-color, #ffffff);
+  background-color: var(--el-bg-color, transparent);
   border: 1px solid var(--el-border-color-light, #e2e8f0);
   border-radius: 8px;
   padding: 24px;
@@ -824,7 +920,7 @@ const handleImportUploadChange = (uploadFile) => {
 }
 
 .drawer-form-card, .drawer-fields-card {
-  background-color: var(--el-bg-color, #ffffff);
+  background-color: var(--el-bg-color, transparent);
   border: 1px solid var(--el-border-color-light, #f1f5f9);
   border-radius: 8px;
   padding: 20px;

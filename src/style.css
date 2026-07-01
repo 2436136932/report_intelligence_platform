@@ -148,7 +148,7 @@ body {
    Dark Theme & Accessibility Overrides (Vanilla CSS)
    ========================================================================== */
 .dark-theme {
-  --el-bg-color: #0b1329 !important;
+  --el-bg-color: #0f1a30 !important;
   --el-bg-color-overlay: #0f1a30 !important;
   --el-text-color-primary: #f8fafc !important;
   --el-text-color-regular: #cbd5e1 !important;
@@ -157,6 +157,8 @@ body {
   --el-border-color-light: #1e293b !important;
   --el-border-color-lighter: #1e293b !important;
   --el-fill-color-blank: #0f1a30 !important;
+  --el-fill-color-light: #1e293b !important;
+  --el-fill-color-extra-light: #070d19 !important;
 }
 
 /* 强制覆盖暗色下表格和布局背景 */
@@ -341,5 +343,232 @@ body {
 
 .color-weak-mode-active {
   filter: sepia(0.2) saturate(1.1) hue-rotate(330deg) !important;
+}
+
+/* ==========================================================================
+   Dark Theme — Page-level containers & cards
+   ========================================================================== */
+
+/* 页面背景容器 */
+.dark-theme .company-management-container,
+.dark-theme .list-view-wrapper,
+.dark-theme .query-management-container,
+.dark-theme .template-management-container {
+  background-color: #070d19 !important;
+}
+
+/* 搜索过滤卡片 & 表格卡片 */
+.dark-theme .filter-card,
+.dark-theme .table-card,
+.dark-theme .drawer-form-card,
+.dark-theme .drawer-fields-card {
+  background-color: #0f1a30 !important;
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 表格表头单元格 — 使用真实 Element Plus 选择器 */
+.dark-theme .el-table__header-wrapper th.el-table__cell,
+.dark-theme .el-table__fixed-header-wrapper th.el-table__cell {
+  background-color: #0c1524 !important;
+  color: #cbd5e1 !important;
+  border-bottom-color: #1e293b !important;
+}
+
+/* 导出按钮在暗色下 */
+.dark-theme .export-btn,
+.dark-theme .export-company-btn,
+.dark-theme .import-template-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #93c5fd !important;
+}
+.dark-theme .export-btn:hover,
+.dark-theme .export-company-btn:hover,
+.dark-theme .import-template-btn:hover {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+}
+
+/* 字段标签 tag */
+.dark-theme .field-count-tag {
+  background-color: #1e3a8a !important;
+  color: #93c5fd !important;
+}
+
+/* 导入弹窗 */
+.dark-theme .import-template-dialog .el-dialog,
+.dark-theme .import-template-dialog .el-dialog__header,
+.dark-theme .import-theme-dialog .el-dialog__body,
+.dark-theme .import-template-dialog .el-dialog__footer {
+  background-color: #0f1a30 !important;
+  border-color: #1e293b !important;
+}
+.dark-theme .import-template-dialog .el-dialog__title {
+  color: #f8fafc !important;
+}
+.dark-theme .import-uploader-drag .el-upload-dragger {
+  background-color: #0c1524 !important;
+  border-color: #334155 !important;
+}
+
+/* 抽屉 Drawer */
+.dark-theme .el-drawer {
+  background-color: #0f1a30 !important;
+}
+.dark-theme .el-drawer__header {
+  background-color: #0c1524 !important;
+  border-bottom: 1px solid #1e293b !important;
+  color: #f8fafc !important;
+}
+.dark-theme .el-drawer__body {
+  background-color: #0f1a30 !important;
+}
+.dark-theme .drawer-title,
+.dark-theme .drawer-main-title,
+.dark-theme .fields-section-title {
+  color: #f8fafc !important;
+}
+
+/* Dialog 弹窗通用 */
+.dark-theme .el-dialog {
+  background-color: #0f1a30 !important;
+  border: 1px solid #1e293b !important;
+}
+.dark-theme .el-dialog__header {
+  background-color: #0c1524 !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+.dark-theme .el-dialog__title {
+  color: #f8fafc !important;
+}
+.dark-theme .el-dialog__body {
+  background-color: #0f1a30 !important;
+  color: #cbd5e1 !important;
+}
+.dark-theme .el-dialog__footer {
+  background-color: #0c1524 !important;
+  border-top: 1px solid #1e293b !important;
+}
+
+/* 分页器 */
+.dark-theme .el-pagination {
+  color: #94a3b8 !important;
+  --el-pagination-bg-color: #0f1a30 !important;
+  --el-pagination-button-bg-color: #0c1524 !important;
+  --el-pagination-hover-color: #60a5fa !important;
+}
+.dark-theme .el-pagination .el-select .el-input__wrapper {
+  background-color: #0c1524 !important;
+  box-shadow: 0 0 0 1px #1e293b inset !important;
+}
+.dark-theme .el-pagination button:disabled {
+  background-color: #0c1524 !important;
+  color: #475569 !important;
+}
+
+/* 表单 label 暗色 */
+.dark-theme .el-form-item__label {
+  color: #94a3b8 !important;
+}
+.dark-theme .el-form-item__error {
+  color: #f87171 !important;
+}
+
+/* Checkbox 暗色 */
+.dark-theme .el-checkbox__label {
+  color: #cbd5e1 !important;
+}
+
+/* Switch 暗色 */
+.dark-theme .el-switch__label {
+  color: #94a3b8 !important;
+}
+
+/* Tag 通用 */
+.dark-theme .el-tag {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #93c5fd !important;
+}
+
+/* el-empty 暗色 */
+.dark-theme .el-empty__description p {
+  color: #64748b !important;
+}
+
+/* Scrollbar */
+.dark-theme ::-webkit-scrollbar-track {
+  background: #0c1524 !important;
+}
+.dark-theme ::-webkit-scrollbar-thumb {
+  background: #1e293b !important;
+  border-radius: 4px;
+}
+.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: #334155 !important;
+}
+
+/* ==========================================================================
+   Dark Theme — Dashboard Cards
+   ========================================================================== */
+
+/* 欢迎卡 / KPI 卡 / 图表面板 / 快捷访问卡 */
+.dark-theme .welcome-card,
+.dark-theme .kpi-card,
+.dark-theme .chart-panel,
+.dark-theme .quick-card {
+  background-color: #0f1a30 !important;
+  border-color: #1e293b !important;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark-theme .quick-card:hover {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* KPI 图标色块在暗色下要避免太鲜亮 */
+.dark-theme .kpi-icon-wrapper.is-blue {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+.dark-theme .kpi-icon-wrapper.is-green {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+.dark-theme .kpi-icon-wrapper.is-orange {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+}
+.dark-theme .kpi-icon-wrapper.is-red {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+.dark-theme .quick-icon-wrapper {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* 仪表盘容器背景 */
+.dark-theme .dashboard-container {
+  background-color: #070d19 !important;
+}
+
+/* 表格 body 单元格文字颜色 */
+.dark-theme .el-table__body-wrapper td.el-table__cell {
+  color: #cbd5e1 !important;
+}
+
+/* el-table 整体背景修复 (覆盖 Element Plus 内联变量) */
+.dark-theme .el-table,
+.dark-theme .el-table__inner-wrapper,
+.dark-theme .el-table__body-wrapper,
+.dark-theme .el-table__header-wrapper {
+  background-color: #0f1a30 !important;
+}
+
+/* status-tag 暗色 */
+.dark-theme .status-tag {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
 }
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage, ElNotification } from 'element-plus'
@@ -111,8 +111,8 @@ const searchItems = [
   { category: '跳转', name: '模板管理', action: () => { router.push('/template') } },
   { category: '跳转', name: '报告列表', action: () => { router.push('/report/list') } },
   { category: '跳转', name: '报告查询', action: () => { router.push('/report/query') } },
-  { category: '操作', name: '亮色主题', action: () => { ElMessage.success('已切换为清爽亮色主题') } },
-  { category: '操作', name: '暗色主题', action: () => { ElMessage.success('已切换为科幻暗色主题') } },
+  { category: '操作', name: '亮色主题', action: () => { changeThemeMode('light') } },
+  { category: '操作', name: '暗色主题', action: () => { changeThemeMode('dark') } },
   { category: '操作', name: '退出登录', action: () => { handleLogout() } }
 ]
 
@@ -273,7 +273,9 @@ const changeThemeMode = (mode) => {
       document.documentElement.classList.remove('dark-theme')
     }
   }
-  ElMessage.success('保存成功')
+  // 持久化保存主题模式
+  localStorage.setItem('report_platform_theme_mode', mode)
+  ElMessage.success('主题已切换')
 }
 
 // 顶部右侧主题切换小图标快捷切换
@@ -324,6 +326,7 @@ const resetConfig = () => {
   document.documentElement.classList.remove('dark-theme')
   document.documentElement.classList.remove('gray-mode-active')
   document.documentElement.classList.remove('color-weak-mode-active')
+  localStorage.removeItem('report_platform_theme_mode')
   applyPrimaryColor('#4E80EE')
 
   ElMessage.success('已恢复系统默认配置')
@@ -333,6 +336,26 @@ const resetConfig = () => {
 watch(activeThemeHex, (newHex) => {
   applyPrimaryColor(newHex)
 }, { immediate: true })
+
+// 页面加载时恢复上次保存的主题模式
+onMounted(() => {
+  const savedTheme = localStorage.getItem('report_platform_theme_mode')
+  if (savedTheme) {
+    themeMode.value = savedTheme
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark-theme')
+    } else if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark-theme')
+    } else {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (isDark) {
+        document.documentElement.classList.add('dark-theme')
+      } else {
+        document.documentElement.classList.remove('dark-theme')
+      }
+    }
+  }
+})
 
 // 监听布局模式变化强制展开侧边栏（如果为侧栏常驻模式）
 watch(layoutMode, (newMode) => {

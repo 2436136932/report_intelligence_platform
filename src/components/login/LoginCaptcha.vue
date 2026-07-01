@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-vue-next'
 
 const emit = defineEmits(['change'])
 
-const captchaText = ref('52bb2')
+const captchaText = ref('')
 const captchaCanvas = ref(null)
 
 const drawCaptcha = () => {
@@ -43,10 +43,10 @@ const drawCaptcha = () => {
     ctx.fillStyle = getRandomColor(120, 200)
     ctx.beginPath()
     ctx.arc(
-      Math.random() * canvas.width, 
-      Math.random() * canvas.height, 
-      0.8 + Math.random() * 1.2, 
-      0, 
+      Math.random() * canvas.width,
+      Math.random() * canvas.height,
+      0.8 + Math.random() * 1.2,
+      0,
       2 * Math.PI
     )
     ctx.fill()
@@ -54,26 +54,26 @@ const drawCaptcha = () => {
 
   ctx.font = 'italic bold 22px "Lucida Console", Monaco, monospace'
   ctx.textBaseline = 'middle'
-  
+
   const text = captchaText.value
   const charWidth = canvas.width / (text.length + 0.8)
-  
+
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
     ctx.fillStyle = getRandomColor(10, 80)
-    
+
     ctx.save()
     const x = (i + 0.5) * charWidth + (Math.random() - 0.5) * 4
     const y = canvas.height / 2 + (Math.random() - 0.5) * 6
     const angle = (Math.random() - 0.5) * 0.4
-    
+
     ctx.translate(x, y)
     ctx.rotate(angle)
-    
+
     const scaleX = 0.9 + Math.random() * 0.2
     const scaleY = 0.9 + Math.random() * 0.2
     ctx.scale(scaleX, scaleY)
-    
+
     ctx.fillText(char, -8, 2)
     ctx.restore()
   }
@@ -112,7 +112,7 @@ defineExpose({
 <template>
   <div class="captcha-wrapper" @click="refreshCaptcha" title="点击刷新验证码">
     <canvas ref="captchaCanvas" width="100" height="38" class="captcha-canvas"></canvas>
-    
+
     <!-- 悬停刷新遮罩 -->
     <div class="captcha-mask">
       <RefreshCw class="refresh-icon" />

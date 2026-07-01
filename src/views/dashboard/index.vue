@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/modules/user'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
 import {
   FileText,
@@ -13,6 +14,8 @@ import {
 } from 'lucide-vue-next'
 
 const userStore = useUserStore()
+const router = useRouter()
+const navigateTo = (path) => router.push(path)
 
 // 图表 DOM 引用
 const trendChartRef = ref(null)
@@ -409,7 +412,7 @@ onUnmounted(() => {
       <div class="chart-panel is-double">
         <div class="panel-header flex-header">
           <h3 class="panel-title">最新报告</h3>
-          <button class="header-link-btn font-sans">
+          <button class="header-link-btn font-sans" @click="navigateTo('/report/list')">
             报告列表
             <ChevronRight class="link-icon" />
           </button>
@@ -437,7 +440,7 @@ onUnmounted(() => {
         </div>
         <div class="panel-body">
           <div class="quick-grid">
-            <div class="quick-card">
+            <div class="quick-card" @click="navigateTo('/report/list')">
               <div class="quick-icon-wrapper">
                 <FileText class="quick-icon" />
               </div>
@@ -446,7 +449,7 @@ onUnmounted(() => {
                 <span class="quick-desc">维护报告与 PDF</span>
               </div>
             </div>
-            <div class="quick-card">
+            <div class="quick-card" @click="navigateTo('/report/query')">
               <div class="quick-icon-wrapper">
                 <Search class="quick-icon" />
               </div>
@@ -455,7 +458,7 @@ onUnmounted(() => {
                 <span class="quick-desc">按编号或公司检索</span>
               </div>
             </div>
-            <div class="quick-card">
+            <div class="quick-card" @click="navigateTo('/company')">
               <div class="quick-icon-wrapper">
                 <Building2 class="quick-icon" />
               </div>
@@ -464,7 +467,7 @@ onUnmounted(() => {
                 <span class="quick-desc">企业档案与关系</span>
               </div>
             </div>
-            <div class="quick-card">
+            <div class="quick-card" @click="navigateTo('/template')">
               <div class="quick-icon-wrapper">
                 <FileCode2 class="quick-icon" />
               </div>
@@ -491,9 +494,9 @@ onUnmounted(() => {
 
 /* ----------------- Welcome Card ----------------- */
 .welcome-card {
-  background-color: #ffffff;
+  background-color: var(--el-bg-color, #ffffff);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-light, #e2e8f0);
   padding: 24px;
   text-align: left;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
@@ -520,7 +523,7 @@ onUnmounted(() => {
   margin: 0 0 6px 0;
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--el-text-color-primary, #0f172a);
 }
 
 .welcome-meta {
@@ -537,9 +540,9 @@ onUnmounted(() => {
 }
 
 .kpi-card {
-  background-color: #ffffff;
+  background-color: var(--el-bg-color, #ffffff);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-light, #e2e8f0);
   padding: 20px;
   display: flex;
   align-items: center;
@@ -598,7 +601,7 @@ onUnmounted(() => {
 .kpi-value {
   font-size: 24px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--el-text-color-primary, #0f172a);
   margin: 2px 0;
 }
 
@@ -616,9 +619,9 @@ onUnmounted(() => {
 
 .chart-panel {
   grid-column: span 6;
-  background-color: #ffffff;
+  background-color: var(--el-bg-color, #ffffff);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--el-border-color-light, #e2e8f0);
   padding: 20px;
   box-sizing: border-box;
   display: flex;
@@ -753,7 +756,7 @@ onUnmounted(() => {
 .item-val {
   font-size: 13px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--el-text-color-primary, #1e293b);
   line-height: 1.2;
 }
 
@@ -787,8 +790,8 @@ onUnmounted(() => {
 }
 
 .quick-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--el-bg-color, #ffffff);
+  border: 1px solid var(--el-border-color-light, #e2e8f0);
   border-radius: 8px;
   padding: 14px;
   display: flex;
@@ -800,8 +803,8 @@ onUnmounted(() => {
 }
 
 .quick-card:hover {
-  border-color: #cbd5e1;
-  background-color: #f8fafc;
+  border-color: var(--el-border-color, #cbd5e1);
+  background-color: var(--el-fill-color-light, #f8fafc);
 }
 
 .quick-icon-wrapper {
@@ -829,7 +832,7 @@ onUnmounted(() => {
 .quick-title {
   font-size: 12px;
   font-weight: 600;
-  color: #334155;
+  color: var(--el-text-color-regular, #334155);
 }
 
 .quick-desc {

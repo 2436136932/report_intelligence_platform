@@ -2,7 +2,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTemplateStore } from '@/store/modules/template'
-import { getCompanyList } from '@/api/company'
+import { getCompanyList, insertCompany, updateCompany, delCompany } from '@/api/company'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Search as SearchIcon,
@@ -40,7 +40,10 @@ const fetchCompanyList = async () => {
     })
 
     if (result && result.data && Array.isArray(result.data.list)) {
-      companyList.value = result.data.list
+      companyList.value = result.data.list.map(item => ({
+        ...item,
+        templateName: getTemplateNameById(item.templateId) || item.templateName || ''
+      }))
       totalCount.value = result.data.total
     }
   } catch (error) {
@@ -49,7 +52,12 @@ const fetchCompanyList = async () => {
 }
 
 // 页面挂载完成自动抓取
-onMounted(() => {
+onMounted(async () => {
+  try {
+    await templateStore.fetchTemplates()
+  } catch (err) {
+    ElMessage.error('获取模板列表失败，请检查网络或联系管理员')
+  }
   fetchCompanyList()
 })
 
@@ -134,11 +142,12 @@ const availableTemplates = computed(() => templateStore.templates)
 // 模板名称与 ID 双向转换映射
 const getTemplateId = (name) => {
   const match = templateStore.templates.find(t => t.name === name)
-  return match ? match.id : null
+  return match ? Number(match.id) : null
 }
 
 const getTemplateNameById = (id) => {
-  const match = templateStore.templates.find(t => t.id === id)
+  if (id === null || id === undefined || id === '') return ''
+  const match = templateStore.templates.find(t => Number(t.id) === Number(id))
   return match ? match.name : ''
 }
 
@@ -147,31 +156,72 @@ const handleTemplateSelectChange = (val) => {
   form.templateId = getTemplateId(val)
 }
 
+const isSaving = ref(false)
+
 // 保存表单
 const handleSave = () => {
-  formRef.value?.validate((valid) => {
+  if (!formRef.value) return
+  formRef.value.validate((valid) => {
     if (valid) {
-      if (isEdit.value) {
-        // 编辑更新
-        const index = companyList.value.findIndex(item => item.id === form.id)
-        if (index !== -1) {
-          companyList.value[index] = { ...form }
-          ElMessage.success('修改成功')
-        }
-      } else {
-        // 新增添加，生成自增 ID
-        const maxId = companyList.value.reduce((max, item) => item.id > max ? item.id : max, 0)
-        const newCompany = {
-          ...form,
-          id: maxId + 1
-        }
-        companyList.value.unshift(newCompany)
-        ElMessage.success('新增成功')
-      }
-      isDrawerOpen.value = false
-      fetchCompanyList()
+      executeSave()
+    } else {
+      ElMessage.warning('请填写必填项')
     }
   })
+}
+
+// 实际异步执行保存业务逻辑
+const executeSave = async () => {
+  isSaving.value = true
+  try {
+    if (isEdit.value) {
+      // 调用修改 API 接口
+      const payload = {
+        id: form.id,
+        name: form.name,
+        path: form.path || '',
+        reportPath: form.reportPath || '',
+        templateId: form.templateId,
+        contact: form.contact || '',
+        phone: form.phone || '',
+        remarks: form.remarks || '',
+        url: form.url
+      }
+      const result = await updateCompany(payload)
+      if (result && result.code === 200) {
+        ElMessage.success('修改成功')
+        isDrawerOpen.value = false
+        fetchCompanyList()
+      } else {
+        ElMessage.error(result.msg || '修改失败')
+      }
+    } else {
+      // 调用新增 API 接口
+      const payload = {
+        name: form.name,
+        path: form.path || '',
+        reportPath: form.reportPath || '',
+        templateId: form.templateId,
+        contact: form.contact || '',
+        phone: form.phone || '',
+        remarks: form.remarks || '',
+        url: form.url
+      }
+      const result = await insertCompany(payload)
+      if (result && result.code === 200) {
+        ElMessage.success('新增成功')
+        isDrawerOpen.value = false
+        fetchCompanyList()
+      } else {
+        ElMessage.error(result.msg || '新增失败')
+      }
+    }
+  } catch (error) {
+    console.error('保存公司数据失败:', error)
+    ElMessage.error(error.message || '操作失败，请检查网络或联系管理员')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 // 删除记录
@@ -186,10 +236,19 @@ const handleDelete = (row) => {
       confirmButtonClass: 'el-button--primary',
       cancelButtonClass: 'el-button--default',
     }
-  ).then(() => {
-    companyList.value = companyList.value.filter(item => item.id !== row.id)
-    ElMessage.success('删除成功')
-    fetchCompanyList()
+  ).then(async () => {
+    try {
+      const result = await delCompany({ id: row.id })
+      if (result && result.code === 200) {
+        ElMessage.success('删除成功')
+        fetchCompanyList()
+      } else {
+        ElMessage.error(result.msg || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除公司失败:', error)
+      ElMessage.error(error.message || '删除失败，请检查网络或联系管理员')
+    }
   }).catch(() => {
     // 取消
   })
@@ -197,13 +256,17 @@ const handleDelete = (row) => {
 
 // 进入官网
 const goToOfficialWebsite = (path) => {
-  if (path) {
-    if (path.startsWith('#')) {
-      const target = path.replace('#', '')
+  if (!path) return
+  if (path.startsWith('#')) {
+    const target = path.replace('#', '')
+    const matched = router.getRoutes().find(r => r.path === target || r.path === '/' + target)
+    if (matched) {
       router.push(target)
     } else {
-      window.open(path, '_blank')
+      ElMessage.warning(`页面路径 "${target}" 不存在`)
     }
+  } else {
+    window.open(path, '_blank')
   }
 }
 
@@ -302,24 +365,49 @@ const handleImportUploadChange = (uploadFile) => {
       }
 
       // 导入规则：有 ID 则更新；无 ID 则新增
-      list.forEach(item => {
-        if (item.id) {
-          const index = companyList.value.findIndex(c => c.id === item.id)
-          if (index !== -1) {
-            companyList.value[index] = item
-          } else {
-            companyList.value.unshift(item)
+      ; (async () => {
+        let successCount = 0
+        let failCount = 0
+        for (const item of list) {
+          try {
+            if (item.id) {
+              await updateCompany({
+                id: item.id,
+                name: item.name,
+                path: item.path || '',
+                reportPath: item.reportPath || '',
+                templateId: item.templateId,
+                contact: item.contact || '',
+                phone: item.phone || '',
+                remarks: item.remarks || '',
+                url: item.url
+              })
+            } else {
+              await insertCompany({
+                name: item.name,
+                path: item.path || '',
+                reportPath: item.reportPath || '',
+                templateId: item.templateId,
+                contact: item.contact || '',
+                phone: item.phone || '',
+                remarks: item.remarks || '',
+                url: item.url
+              })
+            }
+            successCount++
+          } catch (err) {
+            console.error('导入公司数据失败:', err)
+            failCount++
           }
-        } else {
-          const maxId = companyList.value.reduce((max, c) => c.id > max ? c.id : max, 0)
-          companyList.value.unshift({
-            ...item,
-            id: maxId + 1
-          })
         }
-      })
-      ElMessage.success(`导入成功，共处理了 ${list.length} 家公司数据`)
-      isImportDialogOpen.value = false // 自动关闭弹框
+        fetchCompanyList()
+        if (failCount > 0) {
+          ElMessage.warning(`导入完成：成功 ${successCount} 条，失败 ${failCount} 条`)
+        } else {
+          ElMessage.success(`导入成功，共处理了 ${successCount} 家公司数据`)
+        }
+        isImportDialogOpen.value = false // 自动关闭弹框
+      })()
     } catch (err) {
       ElMessage.error('解析错误，文件导入失败')
     }
@@ -434,7 +522,8 @@ const handleImportUploadChange = (uploadFile) => {
           <span class="drawer-title">{{ isEdit ? '编辑公司' : '新增公司' }}</span>
           <div class="drawer-actions">
             <el-button size="default" class="drawer-cancel-btn" @click="isDrawerOpen = false">取消</el-button>
-            <el-button type="primary" size="default" class="drawer-confirm-btn" @click="handleSave">确定</el-button>
+            <el-button type="primary" size="default" class="drawer-confirm-btn" :loading="isSaving"
+              @click="handleSave">确定</el-button>
           </div>
         </div>
       </template>
@@ -499,13 +588,13 @@ const handleImportUploadChange = (uploadFile) => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background-color: var(--el-fill-color-extra-light, #f8fafc);
+  background-color: var(--el-fill-color-extra-light, transparent);
   min-height: calc(100vh - 110px);
   box-sizing: border-box;
 }
 
 .filter-card {
-  background-color: var(--el-bg-color, #ffffff);
+  background-color: var(--el-bg-color, transparent);
   border: 1px solid var(--el-border-color-light, #e2e8f0);
   border-radius: 8px;
   padding: 18px 24px;
@@ -552,7 +641,7 @@ const handleImportUploadChange = (uploadFile) => {
 }
 
 .table-card {
-  background-color: var(--el-bg-color, #ffffff);
+  background-color: var(--el-bg-color, transparent);
   border: 1px solid var(--el-border-color-light, #e2e8f0);
   border-radius: 8px;
   padding: 24px;
