@@ -41,6 +41,12 @@ const routes = [
         name: 'ReportQuery',
         component: () => import('../views/report/query.vue'),
         meta: { title: '报告查询' }
+      },
+      {
+        path: 'personal',
+        name: 'Personal',
+        component: () => import('../views/personal/index.vue'),
+        meta: { title: '个人信息' }
       }
     ]
   }

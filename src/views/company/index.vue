@@ -254,19 +254,28 @@ const handleDelete = (row) => {
   })
 }
 
-// 进入官网
-const goToOfficialWebsite = (path) => {
+// 进入官网：将域名(url)与官网路径(path)拼接成完整外部链接
+const goToOfficialWebsite = (url, path) => {
   if (!path) return
-  if (path.startsWith('#')) {
-    const target = path.replace('#', '')
-    const matched = router.getRoutes().find(r => r.path === target || r.path === '/' + target)
-    if (matched) {
-      router.push(target)
-    } else {
-      ElMessage.warning(`页面路径 "${target}" 不存在`)
-    }
+  const rawPath = path.replace(/^#/, '')
+  // 如果 path 本身就是完整外部网址，直接打开
+  if (/^https?:\/\//.test(rawPath)) {
+    window.open(rawPath, '_blank')
+    return
+  }
+  // 拼接 url + path 形成完整外部链接
+  if (url) {
+    const domain = url.replace(/\/+$/, '') // 去掉域名末尾的斜杠
+    const fullPath = domain + '/' + rawPath.replace(/^\/+/, '') // 去掉 path 开头的斜杠再拼接
+    window.open(fullPath, '_blank')
   } else {
-    window.open(path, '_blank')
+    // 无域名时，按内部路由处理
+    const matched = router.getRoutes().find(r => r.path === rawPath || r.path === '/' + rawPath)
+    if (matched) {
+      router.push(rawPath)
+    } else {
+      ElMessage.warning(`页面路径 "${rawPath}" 不存在`)
+    }
   }
 }
 
@@ -486,8 +495,8 @@ const handleImportUploadChange = (uploadFile) => {
           <template #default="{ row }">
             <div class="action-buttons-cell">
               <!-- 进入官网 link (当 row.path 不为空时显示) -->
-              <el-button v-if="row.path" type="primary" link size="small" @click="goToOfficialWebsite(row.path)"
-                class="row-action-link">
+              <el-button v-if="row.path" type="primary" link size="small"
+                @click="goToOfficialWebsite(row.url, row.path)" class="row-action-link">
                 <component :is="ExternalLinkIcon" class="link-icon-svg" />
                 进入官网
               </el-button>

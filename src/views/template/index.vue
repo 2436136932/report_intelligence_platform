@@ -18,6 +18,26 @@ import { getTemplateList, insertTemplate, updateTemplate } from '@/api/template'
 
 const templateStore = useTemplateStore()
 
+// 字段类型映射字典（对齐后端中文字段类型要求，如 "日期", "下拉选择"）
+const fieldTypeMap = {
+  'text': '单行文本',
+  'textarea': '多行文本',
+  'number': '数字',
+  'date': '日期',
+  'datetime': '日期时间',
+  'image': '附件(图片)',
+  'select': '下拉选择',
+  'radio': '单选',
+  'checkbox': '多选',
+  'switch': '开关'
+}
+
+const getEnglishFieldType = (chineseType) => {
+  if (!chineseType) return 'text'
+  const entry = Object.entries(fieldTypeMap).find(([key, val]) => val === chineseType || key === chineseType)
+  return entry ? entry[0] : 'text'
+}
+
 // 列表数据 & 加载态
 const templateList = ref([])
 const totalCount = ref(0)
@@ -52,23 +72,24 @@ const fetchTemplateList = async () => {
         description: item.description || '',
         fields: Array.isArray(item.templateFields) ? item.templateFields.map(f => {
           let optionsStr = ''
-          if (f.options) {
-            if (Array.isArray(f.options)) {
-              optionsStr = f.options.join('\n')
-            } else if (typeof f.options === 'string') {
-              const trimmed = f.options.trim()
+          const rawOpts = f.options || f.optionds || f.optiond || ''
+          if (rawOpts) {
+            if (Array.isArray(rawOpts)) {
+              optionsStr = rawOpts.join('\n')
+            } else if (typeof rawOpts === 'string') {
+              const trimmed = rawOpts.trim()
               if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
                 try {
                   const parsed = JSON.parse(trimmed)
-                  optionsStr = Array.isArray(parsed) ? parsed.join('\n') : f.options
+                  optionsStr = Array.isArray(parsed) ? parsed.join('\n') : rawOpts
                 } catch (e) {
-                  optionsStr = f.options
+                  optionsStr = rawOpts
                 }
               } else {
-                optionsStr = f.options
+                optionsStr = rawOpts
               }
             } else {
-              optionsStr = String(f.options)
+              optionsStr = String(rawOpts)
             }
           }
           return {
@@ -76,7 +97,7 @@ const fetchTemplateList = async () => {
             templateId: f.templateId,
             label: f.fieldName || '',
             fieldKey: f.keyName || '',
-            fieldType: f.fieldType || 'text',
+            fieldType: getEnglishFieldType(f.fieldType),
             required: f.isrequerd === 1 || f.isrequerd === true,
             sort: f.ordby || 1,
             options: optionsStr,
@@ -244,19 +265,19 @@ const handleSave = () => {
               const isSelect = f.fieldType === 'select'
               const finalOptions = isSelect
                 ? (f.options ? f.options.split('\n').map(o => o.trim()).filter(Boolean) : [])
-                : (f.options || '')
+                : []
               return {
-                id: (!f.id || f.id > 1000000000) ? undefined : f.id,
+                id: (!f.id || f.id > 1000000000) ? null : f.id,
                 templateId: form.id,
                 fieldName: f.label || '',
                 keyName: f.fieldKey || '',
-                fieldType: f.fieldType || 'text',
+                fieldType: fieldTypeMap[f.fieldType] || f.fieldType || '单行文本',
                 isrequerd: f.required ? 1 : 2,
                 fieldPrompt: f.placeholder || null,
                 defvalue: f.defaultValue || null,
                 fieldValue: null,
                 ordby: f.sort || (index + 1),
-                options: finalOptions
+                optionds: finalOptions
               }
             })
           }
@@ -278,17 +299,17 @@ const handleSave = () => {
               const isSelect = f.fieldType === 'select'
               const finalOptions = isSelect
                 ? (f.options ? f.options.split('\n').map(o => o.trim()).filter(Boolean) : [])
-                : (f.options || '')
+                : []
               return {
                 fieldName: f.label || '',
                 keyName: f.fieldKey || '',
-                fieldType: f.fieldType || 'text',
+                fieldType: fieldTypeMap[f.fieldType] || f.fieldType || '单行文本',
                 isrequerd: f.required ? 1 : 2,
                 fieldPrompt: f.placeholder || null,
                 defvalue: f.defaultValue || null,
                 fieldValue: null,
                 ordby: f.sort || (index + 1),
-                options: finalOptions
+                optionds: finalOptions
               }
             })
           }
@@ -326,7 +347,7 @@ const handleDelete = (row) => {
   ).then(() => {
     templateList.value = templateList.value.filter(item => item.id !== row.id)
     ElMessage.success('删除成功')
-  }).catch(() => {})
+  }).catch(() => { })
 }
 
 // 导出所选模板为符合第二组结构的 JSON 格式
@@ -480,7 +501,7 @@ const handleImportUploadChange = (uploadFile) => {
 
 <template>
   <div class="template-management-container font-sans">
-    
+
     <!-- 统一行内搜索过滤与操作栏 -->
     <div class="filter-card">
       <el-form :inline="true" class="search-form-inline">
@@ -517,14 +538,8 @@ const handleImportUploadChange = (uploadFile) => {
 
     <!-- 数据表格卡片 -->
     <div class="table-card">
-      <el-table
-        :data="paginatedList"
-        style="width: 100%"
-        border
-        @selection-change="handleSelectionChange"
-        class="custom-table"
-        header-cell-class-name="table-header-cell"
-      >
+      <el-table :data="paginatedList" style="width: 100%" border @selection-change="handleSelectionChange"
+        class="custom-table" header-cell-class-name="table-header-cell">
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="name" label="模板名称" min-width="180" show-overflow-tooltip />
@@ -550,7 +565,8 @@ const handleImportUploadChange = (uploadFile) => {
                 <component :is="EditIcon" class="link-icon-svg" />
                 编辑
               </el-button>
-              <el-button type="danger" link size="small" @click="handleDelete(row)" class="row-action-link delete-action">
+              <el-button type="danger" link size="small" @click="handleDelete(row)"
+                class="row-action-link delete-action">
                 <component :is="TrashIcon" class="link-icon-svg" />
                 删除
               </el-button>
@@ -560,37 +576,18 @@ const handleImportUploadChange = (uploadFile) => {
       </el-table>
 
       <div class="pagination-container">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="totalCount"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-        />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper" :total="totalCount" @size-change="handleSizeChange"
+          @current-change="handleCurrentChange" />
       </div>
     </div>
 
     <!-- 导入模板 Dialog -->
-    <el-dialog
-      v-model="isImportDialogOpen"
-      title="导入模板"
-      width="540px"
-      align-center
-      class="import-template-dialog font-sans"
-      append-to-body
-    >
+    <el-dialog v-model="isImportDialogOpen" title="导入模板" width="540px" align-center
+      class="import-template-dialog font-sans" append-to-body>
       <div class="import-dialog-body">
-        <el-upload
-          class="import-uploader-drag"
-          drag
-          action=""
-          :auto-upload="false"
-          :show-file-list="false"
-          accept=".json"
-          :on-change="handleImportUploadChange"
-        >
+        <el-upload class="import-uploader-drag" drag action="" :auto-upload="false" :show-file-list="false"
+          accept=".json" :on-change="handleImportUploadChange">
           <div class="drag-content-wrapper">
             <div class="drag-main-text">将 JSON 文件拖到此处，或点击选择文件</div>
             <div class="drag-sub-text">导入规则：有 ID 则更新；无 ID 则新增</div>
@@ -605,13 +602,8 @@ const handleImportUploadChange = (uploadFile) => {
     </el-dialog>
 
     <!-- 新增/编辑模板 Drawer (抽屉组件) -->
-    <el-drawer
-      v-model="isDrawerOpen"
-      size="calc(100% - 240px)"
-      :with-header="true"
-      class="template-drawer font-sans"
-      append-to-body
-    >
+    <el-drawer v-model="isDrawerOpen" size="calc(100% - 240px)" :with-header="true" class="template-drawer font-sans"
+      append-to-body>
       <template #header>
         <div class="drawer-header-title-bar">
           <span class="drawer-main-title">{{ isEdit ? '编辑模板' : '新增模板' }}</span>
@@ -710,7 +702,8 @@ const handleImportUploadChange = (uploadFile) => {
             </el-table-column>
             <el-table-column label="操作" width="90" align="center">
               <template #default="{ $index }">
-                <el-button type="danger" link size="small" @click="handleRemoveField($index)" class="row-action-link delete-action">
+                <el-button type="danger" link size="small" @click="handleRemoveField($index)"
+                  class="row-action-link delete-action">
                   <component :is="TrashIcon" class="link-icon-svg" />
                   删除
                 </el-button>
@@ -778,6 +771,7 @@ const handleImportUploadChange = (uploadFile) => {
   border-color: var(--el-color-primary) !important;
   font-weight: 500;
 }
+
 .query-btn:hover {
   background-color: var(--el-color-primary-light-3) !important;
   border-color: var(--el-color-primary-light-3) !important;
@@ -793,6 +787,7 @@ const handleImportUploadChange = (uploadFile) => {
   border-color: var(--el-color-primary) !important;
   font-weight: 500;
 }
+
 .add-btn:hover {
   background-color: var(--el-color-primary-light-3) !important;
   border-color: var(--el-color-primary-light-3) !important;
@@ -804,6 +799,7 @@ const handleImportUploadChange = (uploadFile) => {
   background-color: var(--el-color-primary-light-9, #eff6ff) !important;
   border-color: var(--el-color-primary-light-8, #bfdbfe) !important;
 }
+
 .export-btn:hover {
   background-color: var(--el-color-primary-light-8, #dbeafe) !important;
   border-color: var(--el-color-primary-light-7, #93c5fd) !important;
@@ -814,6 +810,7 @@ const handleImportUploadChange = (uploadFile) => {
   background-color: var(--el-color-primary) !important;
   border-color: var(--el-color-primary) !important;
 }
+
 .import-btn:hover {
   background-color: var(--el-color-primary-light-3) !important;
   border-color: var(--el-color-primary-light-3) !important;
@@ -830,7 +827,8 @@ const handleImportUploadChange = (uploadFile) => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
-.custom-table, .fields-edit-table {
+.custom-table,
+.fields-edit-table {
   border-radius: 6px;
   overflow: hidden;
 }
@@ -868,6 +866,7 @@ const handleImportUploadChange = (uploadFile) => {
 .row-action-link.delete-action {
   color: var(--el-color-danger, #ef4444);
 }
+
 .row-action-link.delete-action:hover {
   color: var(--el-color-danger-light-3, #f87171);
 }
@@ -879,14 +878,16 @@ const handleImportUploadChange = (uploadFile) => {
 }
 
 /* 抽屉样式 */
-.drawer-header-title-bar, .fields-title-bar {
+.drawer-header-title-bar,
+.fields-title-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
 }
 
-.drawer-main-title, .fields-section-title {
+.drawer-main-title,
+.fields-section-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary, #1e293b);
@@ -907,6 +908,7 @@ const handleImportUploadChange = (uploadFile) => {
   border-color: var(--el-color-primary) !important;
   font-weight: 500;
 }
+
 .drawer-confirm-btn:hover {
   background-color: var(--el-color-primary-light-3) !important;
   border-color: var(--el-color-primary-light-3) !important;
@@ -919,7 +921,8 @@ const handleImportUploadChange = (uploadFile) => {
   gap: 24px;
 }
 
-.drawer-form-card, .drawer-fields-card {
+.drawer-form-card,
+.drawer-fields-card {
   background-color: var(--el-bg-color, transparent);
   border: 1px solid var(--el-border-color-light, #f1f5f9);
   border-radius: 8px;
@@ -947,6 +950,7 @@ const handleImportUploadChange = (uploadFile) => {
 .sort-number-input {
   width: 70px !important;
 }
+
 :deep(.sort-number-input .el-input__wrapper) {
   padding-left: 2px !important;
   padding-right: 2px !important;

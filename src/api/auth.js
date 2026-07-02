@@ -18,6 +18,7 @@ export function loginRequest(data) {
             userInfo: {
               username: 'admin',
               name: 'admin',
+              role: '报告管理员',
               avatar: ''
             }
           }

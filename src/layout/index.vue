@@ -19,7 +19,8 @@ import {
   FileText,
   Monitor,
   Download,
-  Upload
+  Upload,
+  User
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -90,6 +91,15 @@ const handleLogout = () => {
   router.push('/login')
 }
 
+// 处理右上角头像下拉菜单的指令
+const handleCommand = (command) => {
+  if (command === 'logout') {
+    handleLogout()
+  } else if (command === 'personal') {
+    router.push('/personal')
+  }
+}
+
 // 触发报告管理二级菜单折叠
 const toggleReportMenu = () => {
   if (isCollapsed.value) {
@@ -106,7 +116,7 @@ const searchInputRef = ref(null)
 // 点击跳转快捷项定义
 const searchItems = [
   { category: '跳转', name: '仪表盘', action: () => { router.push('/dashboard') } },
-  { category: '跳转', name: '个人信息', action: () => { ElMessage.info('已进入个人信息页面（演示占位）') } },
+  { category: '跳转', name: '个人信息', action: () => { router.push('/personal') } },
   { category: '跳转', name: '公司管理', action: () => { router.push('/company') } },
   { category: '跳转', name: '模板管理', action: () => { router.push('/template') } },
   { category: '跳转', name: '报告列表', action: () => { router.push('/report/list') } },
@@ -404,7 +414,7 @@ const exportConfig = () => {
     sidebarCollapsedWidth: sidebarCollapsedWidth.value,
     menuItemHeight: menuItemHeight.value
   }
-  
+
   const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -425,12 +435,12 @@ const triggerImport = () => {
 const handleImportFile = (event) => {
   const file = event.target.files?.[0]
   if (!file) return
-  
+
   const reader = new FileReader()
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result)
-      
+
       // 更新状态并触发动态拦截
       if (data.themeMode !== undefined) {
         themeMode.value = data.themeMode
@@ -459,7 +469,7 @@ const handleImportFile = (event) => {
       if (data.sidebarExpandedWidth !== undefined) sidebarExpandedWidth.value = data.sidebarExpandedWidth
       if (data.sidebarCollapsedWidth !== undefined) sidebarCollapsedWidth.value = data.sidebarCollapsedWidth
       if (data.menuItemHeight !== undefined) menuItemHeight.value = data.menuItemHeight
-      
+
       ElMessage.success('配置导入成功')
     } catch (err) {
       ElMessage.error('配置文件解析失败，请检查格式')
@@ -472,11 +482,11 @@ const handleImportFile = (event) => {
 
 <template>
   <div :class="['layout-container', { 'size-large': globalSize === 'large', 'size-small': globalSize === 'small' }]"
-       :style="{
-         '--sidebar-expanded-width': `${sidebarExpandedWidth}px`,
-         '--sidebar-collapsed-width': `${sidebarCollapsedWidth}px`,
-         '--menu-item-height': `${menuItemHeight}px`
-       }">
+    :style="{
+      '--sidebar-expanded-width': `${sidebarExpandedWidth}px`,
+      '--sidebar-collapsed-width': `${sidebarCollapsedWidth}px`,
+      '--menu-item-height': `${menuItemHeight}px`
+    }">
 
     <!-- 左侧导航侧边栏 -->
     <aside v-if="isSidebarVisible" :class="['sidebar', { 'is-collapsed': isCollapsed }]">
@@ -493,13 +503,11 @@ const handleImportFile = (event) => {
         <!-- 混合布局下的二级菜单展示 -->
         <template v-if="layoutMode === 'mixed'">
           <template v-if="activePath.startsWith('/report')">
-            <router-link to="/report/list"
-              :class="['menu-item', { 'is-active': activePath === '/report/list' }]">
+            <router-link to="/report/list" :class="['menu-item', { 'is-active': activePath === '/report/list' }]">
               <FileText class="menu-icon" />
               <span class="menu-label" v-show="!isCollapsed">报告列表</span>
             </router-link>
-            <router-link to="/report/query"
-              :class="['menu-item', { 'is-active': activePath === '/report/query' }]">
+            <router-link to="/report/query" :class="['menu-item', { 'is-active': activePath === '/report/query' }]">
               <Search class="menu-icon" />
               <span class="menu-label" v-show="!isCollapsed">报告查询</span>
             </router-link>
@@ -582,7 +590,7 @@ const handleImportFile = (event) => {
                 <component :is="item.icon" class="top-menu-icon" />
                 <span>{{ item.name }}</span>
               </router-link>
-              
+
               <!-- 带有下拉子菜单的项 -->
               <el-dropdown v-else trigger="click" class="top-menu-dropdown">
                 <div :class="['top-menu-item', 'has-dropdown', { 'is-active': activePath.startsWith('/report') }]">
@@ -605,19 +613,23 @@ const handleImportFile = (event) => {
           </template>
 
           <template v-else-if="layoutMode === 'mixed'">
-            <div :class="['top-menu-item', { 'is-active': activePath === '/dashboard' }]" @click="router.push('/dashboard')">
+            <div :class="['top-menu-item', { 'is-active': activePath === '/dashboard' }]"
+              @click="router.push('/dashboard')">
               <LayoutDashboard class="top-menu-icon" />
               <span>首页</span>
             </div>
-            <div :class="['top-menu-item', { 'is-active': activePath === '/company' }]" @click="router.push('/company')">
+            <div :class="['top-menu-item', { 'is-active': activePath === '/company' }]"
+              @click="router.push('/company')">
               <Building2 class="top-menu-icon" />
               <span>公司管理</span>
             </div>
-            <div :class="['top-menu-item', { 'is-active': activePath === '/template' }]" @click="router.push('/template')">
+            <div :class="['top-menu-item', { 'is-active': activePath === '/template' }]"
+              @click="router.push('/template')">
               <FileCode2 class="top-menu-icon" />
               <span>模板管理</span>
             </div>
-            <div :class="['top-menu-item', { 'is-active': activePath.startsWith('/report') }]" @click="router.push('/report/list')">
+            <div :class="['top-menu-item', { 'is-active': activePath.startsWith('/report') }]"
+              @click="router.push('/report/list')">
               <FolderLock class="top-menu-icon" />
               <span>报告管理</span>
             </div>
@@ -640,17 +652,24 @@ const handleImportFile = (event) => {
             <Moon v-else class="tool-icon" />
           </button>
 
-          <el-dropdown trigger="click" @command="handleLogout">
+          <el-dropdown trigger="hover" @command="handleCommand">
             <div class="user-profile">
               <span class="user-avatar font-mono">{{ (userStore.userInfo?.username || 'A')[0].toUpperCase() }}</span>
               <span class="user-name">{{ userStore.userInfo?.username || userStore.userInfo?.name || '未登录' }}</span>
             </div>
             <template #dropdown>
               <el-dropdown-menu>
+                <div class="dropdown-role-info">当前角色：报告管理员</div>
+                <el-dropdown-item command="personal">
+                  <span class="dropdown-item-link">
+                    <User class="dropdown-item-icon" />
+                    个人信息
+                  </span>
+                </el-dropdown-item>
                 <el-dropdown-item command="logout">
-                  <span class="logout-item">
-                    <LogOut class="logout-icon" />
-                    安全退出
+                  <span class="dropdown-item-link">
+                    <LogOut class="dropdown-item-icon" />
+                    登出
                   </span>
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -858,14 +877,17 @@ const handleImportFile = (event) => {
             <div class="config-section">
               <h4 class="config-section-title">布局模式</h4>
               <div class="layout-mode-grid">
-                <div v-for="item in layoutModes" :key="item.key" 
-                     :class="['layout-mode-card', { 'is-active': layoutMode === item.key }]"
-                     @click="layoutMode = item.key">
+                <div v-for="item in layoutModes" :key="item.key"
+                  :class="['layout-mode-card', { 'is-active': layoutMode === item.key }]"
+                  @click="layoutMode = item.key">
                   <div class="layout-icon-wrapper">
                     <!-- 动态CSS绘制的极简布局图标 -->
-                    <div class="mini-sidebar" :class="{ 'is-dark': item.key === 'classic' || item.key === 'sidebar', 'is-light': item.key === 'top', 'is-mixed': item.key === 'mixed' }"></div>
+                    <div class="mini-sidebar"
+                      :class="{ 'is-dark': item.key === 'classic' || item.key === 'sidebar', 'is-light': item.key === 'top', 'is-mixed': item.key === 'mixed' }">
+                    </div>
                     <div class="mini-header" :class="{ 'is-dark': item.key === 'top' }"></div>
-                    <div class="mini-content" :class="{ 'left-0': item.key === 'top', 'left-24': item.key === 'mixed' }">
+                    <div class="mini-content"
+                      :class="{ 'left-0': item.key === 'top', 'left-24': item.key === 'mixed' }">
                       <div class="mini-line w-full"></div>
                       <div class="mini-line w-half"></div>
                     </div>
@@ -881,7 +903,7 @@ const handleImportFile = (event) => {
             <!-- 界面配置 -->
             <div class="config-section">
               <h4 class="config-section-title">界面配置</h4>
-              
+
               <div class="switch-setting-item">
                 <div class="switch-label-group">
                   <span class="switch-main-label">显示标签页</span>
@@ -906,14 +928,15 @@ const handleImportFile = (event) => {
             <!-- 尺寸配置 -->
             <div class="config-section">
               <h4 class="config-section-title">尺寸配置</h4>
-              
+
               <div class="setting-form-row">
                 <div class="setting-label-group">
                   <span class="setting-main-label">侧边栏展开宽度</span>
                   <span class="setting-sub-label">侧边栏完全展开时的宽度</span>
                 </div>
                 <div class="num-input-with-suffix">
-                  <el-input-number v-model="sidebarExpandedWidth" :min="180" :max="320" :step="1" style="width: 100px" controls-position="right" />
+                  <el-input-number v-model="sidebarExpandedWidth" :min="180" :max="320" :step="1" style="width: 100px"
+                    controls-position="right" />
                   <span class="px-suffix">px</span>
                 </div>
               </div>
@@ -924,7 +947,8 @@ const handleImportFile = (event) => {
                   <span class="setting-sub-label">侧边栏收缩时的最小宽度</span>
                 </div>
                 <div class="num-input-with-suffix">
-                  <el-input-number v-model="sidebarCollapsedWidth" :min="40" :max="100" :step="1" style="width: 100px" controls-position="right" />
+                  <el-input-number v-model="sidebarCollapsedWidth" :min="40" :max="100" :step="1" style="width: 100px"
+                    controls-position="right" />
                   <span class="px-suffix">px</span>
                 </div>
               </div>
@@ -935,7 +959,8 @@ const handleImportFile = (event) => {
                   <span class="setting-sub-label">侧边栏菜单项的高度</span>
                 </div>
                 <div class="num-input-with-suffix">
-                  <el-input-number v-model="menuItemHeight" :min="32" :max="64" :step="1" style="width: 100px" controls-position="right" />
+                  <el-input-number v-model="menuItemHeight" :min="32" :max="64" :step="1" style="width: 100px"
+                    controls-position="right" />
                   <span class="px-suffix">px</span>
                 </div>
               </div>
@@ -948,24 +973,26 @@ const handleImportFile = (event) => {
             <div class="config-section">
               <h4 class="config-section-title">系统信息</h4>
               <table class="info-table">
-                <tr>
-                  <td class="info-label">版本</td>
-                  <td class="info-value">v2.7.4</td>
-                  <td class="info-label">前端框架</td>
-                  <td class="info-value">Vue 3</td>
-                </tr>
-                <tr>
-                  <td class="info-label">UI组件库</td>
-                  <td class="info-value">Element Plus</td>
-                  <td class="info-label">构建工具</td>
-                  <td class="info-value">Vite</td>
-                </tr>
-                <tr>
-                  <td class="info-label">浏览器</td>
-                  <td class="info-value">{{ getBrowserName() }}</td>
-                  <td class="info-label">屏幕分辨率</td>
-                  <td class="info-value">{{ screenResolution }}</td>
-                </tr>
+                <tbody>
+                  <tr>
+                    <td class="info-label">版本</td>
+                    <td class="info-value">v1.0.0</td>
+                    <td class="info-label">前端框架</td>
+                    <td class="info-value">Vue 3</td>
+                  </tr>
+                  <tr>
+                    <td class="info-label">UI组件库</td>
+                    <td class="info-value">Element Plus</td>
+                    <td class="info-label">构建工具</td>
+                    <td class="info-value">Vite</td>
+                  </tr>
+                  <tr>
+                    <td class="info-label">浏览器</td>
+                    <td class="info-value">{{ getBrowserName() }}</td>
+                    <td class="info-label">屏幕分辨率</td>
+                    <td class="info-value">{{ screenResolution }}</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
 
@@ -975,7 +1002,7 @@ const handleImportFile = (event) => {
             <div class="config-section">
               <h4 class="config-section-title">配置管理</h4>
               <div class="management-cards-stack">
-                
+
                 <!-- 重置配置 -->
                 <div class="mgmt-card">
                   <div class="mgmt-icon-box reset-icon-box">
@@ -1010,7 +1037,8 @@ const handleImportFile = (event) => {
                     <div class="mgmt-card-desc">从 JSON 文件导入配置</div>
                   </div>
                   <el-button type="success" plain size="small" @click="triggerImport" class="mgmt-btn">导入配置</el-button>
-                  <input type="file" ref="importFileInputRef" style="display: none" accept=".json" @change="handleImportFile" />
+                  <input type="file" ref="importFileInputRef" style="display: none" accept=".json"
+                    @change="handleImportFile" />
                 </div>
 
               </div>
@@ -1375,22 +1403,28 @@ const handleImportFile = (event) => {
   box-shadow: inset 0 0 4px rgba(30, 64, 175, 0.1);
 }
 
-.user-name {
-  font-size: 14px;
-  color: #334155;
-  font-weight: 500;
+/* 用户下拉卡片定制样式 */
+.dropdown-role-info {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #b45309;
+  /* 尊贵金/黄褐色字 */
+  font-weight: 600;
+  border-bottom: 1px solid var(--el-border-color-lighter, #f1f5f9);
+  pointer-events: none;
+  /* 禁止点击 */
 }
 
-.logout-item {
+.dropdown-item-link {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #ef4444;
+  width: 100%;
 }
 
-.logout-icon {
-  width: 16px;
-  height: 16px;
+.dropdown-item-icon {
+  width: 15px;
+  height: 15px;
 }
 
 /* 多页签 TagBar */
@@ -1744,18 +1778,22 @@ const handleImportFile = (event) => {
   border-right: 1px solid var(--el-border-color-light, #e2e8f0);
   z-index: 10;
 }
+
 .mini-sidebar.is-dark {
   background-color: var(--el-color-primary);
   border-right-color: var(--el-color-primary);
 }
+
 .mini-sidebar.is-light {
   display: none;
 }
+
 .mini-sidebar.is-mixed {
   width: 24px;
   background-color: var(--el-bg-color, #ffffff);
   border-right: 1px solid var(--el-border-color-light, #e2e8f0);
 }
+
 .mini-sidebar.is-mixed::before {
   content: '';
   position: absolute;
@@ -1776,6 +1814,7 @@ const handleImportFile = (event) => {
   border-bottom: 1px solid var(--el-border-color-light, #e2e8f0);
   z-index: 5;
 }
+
 .mini-header.is-dark {
   background-color: var(--el-color-primary);
   border-bottom-color: var(--el-color-primary);
@@ -1792,9 +1831,11 @@ const handleImportFile = (event) => {
   flex-direction: column;
   gap: 4px;
 }
+
 .mini-content.left-0 {
   left: 0;
 }
+
 .mini-content.left-24 {
   left: 24px;
 }
@@ -1804,9 +1845,11 @@ const handleImportFile = (event) => {
   border-radius: 2px;
   background-color: var(--el-border-color, #e2e8f0);
 }
+
 .mini-line.w-full {
   width: 100%;
 }
+
 .mini-line.w-half {
   width: 60%;
 }
@@ -1816,6 +1859,7 @@ const handleImportFile = (event) => {
   font-weight: 500;
   color: var(--el-text-color-primary);
 }
+
 .layout-mode-card.is-active .layout-mode-title {
   color: var(--el-color-primary);
 }
@@ -1830,6 +1874,7 @@ const handleImportFile = (event) => {
   align-items: center;
   gap: 8px;
 }
+
 .px-suffix {
   font-size: 13px;
   color: var(--el-text-color-regular);
@@ -1899,9 +1944,11 @@ const handleImportFile = (event) => {
   font-size: 13px;
   font-weight: 500;
 }
+
 .top-submenu-item.is-active {
   color: var(--el-color-primary);
 }
+
 .top-submenu-icon {
   width: 16px;
   height: 16px;
@@ -1919,6 +1966,7 @@ const handleImportFile = (event) => {
 .transition-fade-leave-active {
   transition: opacity 0.2s ease;
 }
+
 .transition-fade-enter-from,
 .transition-fade-leave-to {
   opacity: 0;
@@ -1928,10 +1976,12 @@ const handleImportFile = (event) => {
 .transition-slide-leave-active {
   transition: all 0.25s ease;
 }
+
 .transition-slide-enter-from {
   opacity: 0;
   transform: translateX(-15px);
 }
+
 .transition-slide-leave-to {
   opacity: 0;
   transform: translateX(15px);
@@ -1941,10 +1991,12 @@ const handleImportFile = (event) => {
 .transition-zoom-leave-active {
   transition: all 0.2s ease;
 }
+
 .transition-zoom-enter-from {
   opacity: 0;
   transform: scale(0.97);
 }
+
 .transition-zoom-leave-to {
   opacity: 0;
   transform: scale(1.03);
@@ -2254,6 +2306,7 @@ const handleImportFile = (event) => {
   background-color: #fef2f2;
   border: 1px solid #fee2e2;
 }
+
 .reset-icon-box .mgmt-icon {
   color: #ef4444;
 }
@@ -2262,6 +2315,7 @@ const handleImportFile = (event) => {
   background-color: #eff6ff;
   border: 1px solid #bfdbfe;
 }
+
 .export-icon-box .mgmt-icon {
   color: #3b82f6;
 }
@@ -2270,6 +2324,7 @@ const handleImportFile = (event) => {
   background-color: #f0fdf4;
   border: 1px solid #bbf7d0;
 }
+
 .import-icon-box .mgmt-icon {
   color: #22c55e;
 }

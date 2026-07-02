@@ -5,7 +5,7 @@ import { useUserStore } from '@/store/modules/user'
 // 创建 axios 实例
 const service = axios.create({
   baseURL: 'http://192.168.1.47:8888', // 接口网关基地址
-  timeout: 10000 // 超时时间：10秒
+  timeout: 60000 // 超时时间：60秒（含文件上传）
 })
 
 // 请求拦截器
@@ -34,8 +34,8 @@ service.interceptors.response.use(
     const code = res.code !== undefined ? res.code : res.resultCode
     const msg = res.msg || res.message || res.errormsg || ''
     
-    // 如果 code 存在且不是 200，则判定为错误接口响应
-    if (code !== undefined && code !== 200 && code !== null) {
+    // 如果 code 存在且不是 200 且不是 1，则判定为错误接口响应
+    if (code !== undefined && code !== 200 && code !== 1 && code !== null) {
       ElMessage.error(msg || '服务器处理出错')
       return Promise.reject(new Error(msg || 'Error'))
     }
