@@ -320,9 +320,9 @@ async function fetchSystemData() {
       const comp = companies.find(c => c.id === item.companyId)
       return {
         code: item.number || '',
-        name: item.pdfName || '',
+        name: item.pdfRealyName || item.pdfName || '',
         company: comp ? comp.name : '未知公司',
-        attachment: item.pdfName || '无',
+        attachment: item.pdfRealyName || item.pdfName || '无',
         time: item.createTime || ''
       }
     })

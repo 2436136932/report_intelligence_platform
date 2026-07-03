@@ -431,7 +431,7 @@ const loadDashboardData = async () => {
       const hasPdf = item.pdfName && item.pdfName !== '未上传附件.pdf'
       return {
         code: item.number || '',
-        name: item.pdfName || '',
+        name: item.pdfRealyName || item.pdfName || '',
         company: comp ? comp.name : '未知公司',
         template: tplName || '未知模板',
         status: hasPdf ? '已上传' : '待补',
@@ -511,7 +511,7 @@ onUnmounted(() => {
         <div class="kpi-info">
           <div class="kpi-label">PDF 附件覆盖率</div>
           <div class="kpi-value font-mono">{{ statData.rc > 0 ? (statData.rpdfc / statData.rc * 100).toFixed(0) : 100
-            }}%</div>
+          }}%</div>
           <div class="kpi-sub font-mono">最近 {{ statData.rpdfc }}/{{ statData.rc }} 份</div>
         </div>
       </div>
