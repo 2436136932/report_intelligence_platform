@@ -289,10 +289,10 @@ const loadDashboardData = async () => {
     // 前端自动启动本地报告列表汇总计算，100% 还原并精准渲染看板指标！
     if (!hasStatsApiData) {
       console.warn('后端统计接口返回为空，前端已自动启动本地数据库记录重构计算。')
-      
+
       const totalReports = allReports.length
       const pdfReports = allReports.filter(r => r.pdfName && r.pdfName !== '未上传附件.pdf').length
-      
+
       // 计算今日新增报告 (按当前本地日期 'MM/DD' 匹配)
       const today = new Date()
       const todayStr = String(today.getMonth() + 1).padStart(2, '0') + '/' + String(today.getDate()).padStart(2, '0')
@@ -322,14 +322,25 @@ const loadDashboardData = async () => {
         const cName = comp ? comp.name : '未知公司'
         cCounts[cName] = (cCounts[cName] || 0) + 1
 
-        const tpl = templatesList.find(t => t.id === r.templateId)
-        const tName = tpl ? tpl.name : '未知模板'
+        let tName = r.templateName
+        if (!tName) {
+          const tpl = templatesList.find(t => t.id === r.templateId)
+          if (tpl) {
+            tName = tpl.name
+          } else if (comp?.templateId) {
+            const cTpl = templatesList.find(t => t.id === comp.templateId)
+            if (cTpl) {
+              tName = cTpl.name
+            }
+          }
+        }
+        tName = tName || '未知模板'
         tCounts[tName] = (tCounts[tName] || 0) + 1
       })
 
       const topC = Object.entries(cCounts).sort((a, b) => b[1] - a[1])[0]
       const topT = Object.entries(tCounts).sort((a, b) => b[1] - a[1])[0]
-      
+
       statData.value.topCompany = topC ? topC[0] : '暂无高频公司'
       statData.value.topTemplate = topT ? topT[0] : '暂无高频模板'
 
@@ -343,7 +354,7 @@ const loadDashboardData = async () => {
         dateList.push(dStr)
         countMap[dStr] = 0
       }
-      
+
       allReports.forEach(r => {
         if (r.createTime) {
           const d = new Date(r.createTime)
@@ -379,8 +390,20 @@ const loadDashboardData = async () => {
     // 汇总模板分布
     const templateCounts = {}
     allReports.forEach(r => {
-      const tpl = templatesList.find(t => t.id === r.templateId)
-      const tName = tpl ? tpl.name : '未知模板'
+      const comp = companyList.find(c => c.id === r.companyId)
+      let tName = r.templateName
+      if (!tName) {
+        const tpl = templatesList.find(t => t.id === r.templateId)
+        if (tpl) {
+          tName = tpl.name
+        } else if (comp?.templateId) {
+          const cTpl = templatesList.find(t => t.id === comp.templateId)
+          if (cTpl) {
+            tName = cTpl.name
+          }
+        }
+      }
+      tName = tName || '未知模板'
       templateCounts[tName] = (templateCounts[tName] || 0) + 1
     })
     const sortedTemplates = Object.entries(templateCounts).map(([name, val]) => ({
@@ -398,13 +421,19 @@ const loadDashboardData = async () => {
     const recentList = Array.isArray(recentRes?.data?.list) ? recentRes.data.list : []
     recentReportsList.value = recentList.map(item => {
       const comp = companyList.find(c => c.id === item.companyId)
-      const tpl = templatesList.find(t => t.id === item.templateId)
+      let tplName = item.templateName
+      if (!tplName && comp?.templateId) {
+        const tpl = templatesList.find(t => t.id === comp.templateId)
+        if (tpl) {
+          tplName = tpl.name
+        }
+      }
       const hasPdf = item.pdfName && item.pdfName !== '未上传附件.pdf'
       return {
         code: item.number || '',
         name: item.pdfName || '',
         company: comp ? comp.name : '未知公司',
-        template: tpl ? tpl.name : '未知模板',
+        template: tplName || '未知模板',
         status: hasPdf ? '已上传' : '待补',
         time: item.createTime || ''
       }

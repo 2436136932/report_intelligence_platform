@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { getReportList } from '@/api/template'
+import { getCompanyList } from '@/api/company'
+import { useTemplateStore } from '@/store/modules/template'
 import { Search, RotateCw, FileCode, FileText } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
@@ -15,69 +18,134 @@ const queryParams = ref({
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-// 公司下拉备选
-const companyOptions = ['广东粮', '中泉', '安徽粮', '山东粮', '辽宁粮', '上海粮科']
 
 // 当前选中的报告记录（右侧联动展示）
 const selectedReport = ref(null)
 const qrCanvasRef = ref(null)
 
+const templateStore = useTemplateStore()
+const companyList = ref([])
+
+// 获取公司列表，作为公司下拉和报告公司名称映射的数据源
+const fetchCompanyList = async () => {
+  const result = await getCompanyList({
+    pageNo: 1,
+    pageSize: 10000
+  })
+  if (result && result.code === 200 && result.data && Array.isArray(result.data.list)) {
+    companyList.value = result.data.list
+  } else {
+    ElMessage.error(result?.msg || '获取公司列表失败')
+  }
+}
+
 const rawReportList = ref([])
+const totalCount = ref(0)
 
-// 检索数据缓存
-const activeSearch = ref({
-  code: '',
-  name: '',
-  company: ''
-})
+// 从后端获取报告列表数据（后端分页+后端筛选）
+const fetchReportList = async () => {
+  const result = await getReportList({
+    number: queryParams.value.code.trim(),
+    pdfName: queryParams.value.name.trim(),
+    companyId: queryParams.value.company || '',
+    pageNo: currentPage.value,
+    pageSize: pageSize.value
+  })
+  if (result && result.code === 200 && result.data && Array.isArray(result.data.list)) {
+    rawReportList.value = result.data.list.map(item => {
+      const comp = companyList.value.find(c => c.id === item.companyId)
+      let tplName = item.templateName
+      let resolvedTplId = comp?.templateId || null
+      if (!tplName && resolvedTplId) {
+        const tpl = templateStore.templates.find(t => Number(t.id) === Number(resolvedTplId))
+        if (tpl) tplName = tpl.name
+      }
+      if (!resolvedTplId) {
+        const matchedTpl = templateStore.templates.find(t => t.name === tplName)
+        if (matchedTpl) resolvedTplId = matchedTpl.id
+      }
+      const pdfUrl = item.pdfPath
+        ? (item.pdfPath.startsWith('http') ? item.pdfPath : `http://192.168.1.47:8888${item.pdfPath.startsWith('/') ? '' : '/'}${item.pdfPath}`)
+        : ''
+      return {
+        id: item.id,
+        code: item.number || '',
+        name: item.pdfRealyName || item.pdfName || '',
+        company: comp ? comp.name : '未知公司',
+        template: tplName || '未知模板',
+        templateId: resolvedTplId,
+        attachment: item.pdfName || (item.pdfPath ? item.pdfPath.split('/').pop() : ''),
+        pdfUrl: pdfUrl,
+        domain: comp ? comp.url : '',
+        remark: item.remarks || '',
+        time: item.createTime || '',
+        dynamicFields: item.templateFields ? item.templateFields.reduce((acc, f) => {
+          acc[f.keyName] = f.fieldValue
+          return acc
+        }, {}) : {}
+      }
+    })
+    totalCount.value = result.data.total
+  } else {
+    ElMessage.error(result?.msg || '获取报告列表失败')
+  }
+}
 
+// 点击查询：回到第1页，重新请求后端数据
 const handleQuery = () => {
-  activeSearch.value = { ...queryParams.value }
   currentPage.value = 1
-  
-  // 检索后，重置默认选中第一行
-  nextTick(() => {
-    if (paginatedList.value.length > 0) {
-      selectedReport.value = paginatedList.value[0]
-    } else {
-      selectedReport.value = null
-    }
+  fetchReportList().then(() => {
+    nextTick(() => {
+      if (rawReportList.value.length > 0) {
+        selectedReport.value = rawReportList.value[0]
+      } else {
+        selectedReport.value = null
+      }
+    })
   })
 }
 
+// 点击重置：清空筛选条件，回到第1页，重新请求
 const handleReset = () => {
   queryParams.value = {
     code: '',
     name: '',
     company: ''
   }
-  activeSearch.value = {
-    code: '',
-    name: '',
-    company: ''
-  }
   currentPage.value = 1
-  nextTick(() => {
-    selectedReport.value = paginatedList.value[0]
+  fetchReportList().then(() => {
+    nextTick(() => {
+      if (rawReportList.value.length > 0) {
+        selectedReport.value = rawReportList.value[0]
+      } else {
+        selectedReport.value = null
+      }
+    })
   })
 }
 
-// 筛选后列表
-const filteredList = computed(() => {
-  return rawReportList.value.filter(item => {
-    const matchCode = !activeSearch.value.code || item.code.toLowerCase().includes(activeSearch.value.code.toLowerCase())
-    const matchName = !activeSearch.value.name || item.name.toLowerCase().includes(activeSearch.value.name.toLowerCase())
-    const matchCompany = !activeSearch.value.company || item.company === activeSearch.value.company
-    return matchCode && matchName && matchCompany
+// 分页切换：每页条数变了
+const handleSizeChange = () => {
+  currentPage.value = 1
+  fetchReportList().then(() => {
+    if (rawReportList.value.length > 0) {
+      selectedReport.value = rawReportList.value[0]
+    } else {
+      selectedReport.value = null
+    }
   })
-})
+}
 
-// 分页切片
-const paginatedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredList.value.slice(start, end)
-})
+// 分页切换：页码变了
+const handleCurrentChange = () => {
+  fetchReportList().then(() => {
+    if (rawReportList.value.length > 0) {
+      selectedReport.value = rawReportList.value[0]
+    } else {
+      selectedReport.value = null
+    }
+  })
+}
 
 // 表格选中行联动
 const handleCurrentRowChange = (val) => {
@@ -90,7 +158,7 @@ const handleCurrentRowChange = (val) => {
 const drawQrCode = (row) => {
   if (!row || !qrCanvasRef.value) return
   const qrUrl = `${row.domain}/report?reportId=${row.code}`
-  
+
   QRCode.toCanvas(qrCanvasRef.value, qrUrl, {
     width: 140,
     margin: 1,
@@ -112,20 +180,33 @@ watch(selectedReport, (newVal) => {
   }
 })
 
+// 当前选中报告对应的模板字段定义
+const currentTemplateFields = computed(() => {
+  if (!selectedReport.value?.templateId) return []
+  const tpl = templateStore.templates.find(t => Number(t.id) === Number(selectedReport.value.templateId))
+  return tpl?.fields || []
+})
+
 // 挂载时渲染第一行
-onMounted(() => {
-  if (paginatedList.value.length > 0) {
-    selectedReport.value = paginatedList.value[0]
+onMounted(async () => {
+  await templateStore.fetchTemplates()
+  await fetchCompanyList()//获取公司列表
+  await fetchReportList()//获取报告列表
+
+  if (rawReportList.value.length > 0) {
+    selectedReport.value = rawReportList.value[0]
+  } else {
+    selectedReport.value = null
   }
 })
 </script>
 
 <template>
   <div class="report-query-container font-sans">
-    
+
     <!-- 左右两栏布局 -->
     <div class="query-grid-layout">
-      
+
       <!-- 左栏：列表及筛选 -->
       <div class="left-query-panel">
         <!-- 筛选栏 -->
@@ -139,7 +220,7 @@ onMounted(() => {
             </el-form-item>
             <el-form-item label="公司">
               <el-select v-model="queryParams.company" placeholder="请选择" clearable style="width: 120px">
-                <el-option v-for="item in companyOptions" :key="item" :label="item" :value="item" />
+                <el-option v-for="item in companyList" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
             </el-form-item>
             <el-form-item class="form-btn-item">
@@ -157,14 +238,8 @@ onMounted(() => {
 
         <!-- 数据表格，高亮选中行 -->
         <div class="table-wrapper">
-          <el-table 
-            :data="paginatedList" 
-            stripe 
-            highlight-current-row
-            @current-change="handleCurrentRowChange"
-            style="width: 100%" 
-            class="data-table"
-          >
+          <el-table :data="rawReportList" stripe highlight-current-row @current-change="handleCurrentRowChange"
+            style="width: 100%" class="data-table">
             <el-table-column prop="code" label="报告ID" width="130" show-overflow-tooltip />
             <el-table-column prop="name" label="报告名称" min-width="180" show-overflow-tooltip />
             <el-table-column prop="company" label="公司" width="80" />
@@ -175,21 +250,16 @@ onMounted(() => {
 
         <!-- 分页 -->
         <footer class="pagination-footer">
-          <el-pagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="[10, 20, 50]"
-            layout="total, sizes, prev, pager, next"
-            :total="filteredList.length"
-            class="pagination-bar"
-          />
+          <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next" :total="totalCount" class="pagination-bar"
+            @size-change="handleSizeChange" @current-change="handleCurrentChange" />
         </footer>
       </div>
 
       <!-- 右栏：明细卡片与动态生成的二维码 -->
       <div class="right-details-panel">
         <div class="details-card" v-if="selectedReport">
-          
+
           <!-- 详情卡片顶部标题 -->
           <header class="details-header">
             <div class="title-row">
@@ -235,32 +305,25 @@ onMounted(() => {
           <!-- 下沿报告内容属性框 -->
           <footer class="details-content-box">
             <h4 class="box-title">报告内容</h4>
-            <div class="meta-grid">
-              <div class="meta-row">
-                <span class="meta-lbl">报告编号</span>
-                <span class="meta-val font-mono">{{ selectedReport.code }}</span>
+            <div class="meta-grid" v-if="currentTemplateFields.length > 0">
+              <div class="meta-row" v-for="field in currentTemplateFields" :key="field.fieldKey">
+                <span class="meta-lbl">{{ field.label }}</span>
+                <span class="meta-val"
+                  :class="{ 'font-mono': field.fieldType === 'date' || field.fieldType === 'datetime' || field.fieldType === 'number' }">
+                  {{ selectedReport.dynamicFields[field.fieldKey] || '-' }}
+                </span>
               </div>
+            </div>
+            <div class="meta-grid" v-else>
               <div class="meta-row">
-                <span class="meta-lbl">产品名称</span>
-                <span class="meta-val">{{ selectedReport.name }}</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-lbl">委托客户</span>
-                <span class="meta-val">{{ selectedReport.client }}</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-lbl">受检客户</span>
-                <span class="meta-val">{{ selectedReport.testedClient }}</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-lbl">报告发布日期</span>
-                <span class="meta-val font-mono">{{ selectedReport.publishDate }}</span>
+                <span class="meta-lbl">暂无字段</span>
+                <span class="meta-val">该模板未定义字段</span>
               </div>
             </div>
           </footer>
 
         </div>
-        
+
         <!-- 空状态展示 -->
         <div class="empty-details" v-else>
           <FileText class="empty-icon" />
@@ -320,7 +383,8 @@ onMounted(() => {
 }
 
 .form-btn-item {
-  margin-left: auto; /* 将按钮推至右侧对齐 */
+  margin-left: auto;
+  /* 将按钮推至右侧对齐 */
 }
 
 .search-btn {
@@ -585,6 +649,7 @@ onMounted(() => {
 
 /* ----------------- 响应式适配 ----------------- */
 @media (max-width: 1024px) {
+
   .left-query-panel,
   .right-details-panel {
     grid-column: span 12;

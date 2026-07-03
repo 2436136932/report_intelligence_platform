@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { useTemplateStore } from '@/store/modules/template'
-import { getReportList } from '@/api/template'
+import { getReportList, getDashboardStats } from '@/api/template'
 import { getCompanyList } from '@/api/company'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
@@ -251,37 +251,164 @@ const handleSubmitPassword = async () => {
   }
 }
 
-onUnmounted(() => {
-  if (phoneTimer) clearInterval(phoneTimer)
-  if (emailTimer) clearInterval(emailTimer)
+// ==========================================================
+// 系统指标统计、图表挂载与数据刷新逻辑
+// ==========================================================
+const stats = ref({ reportsCount: 0, companiesCount: 0, templatesCount: 0, attachmentsCount: 0 })
+const trendMetrics = ref({
+  todayNew: '0 份',
+  pdfCoverage: '0%',
+  topCompany: '暂无',
+  topTemplate: '暂无'
 })
-
-// ==========================================================
-// 待编写：系统指标统计、图表挂载与数据刷新逻辑（将在下一步教程中教你写）
-// ==========================================================
-const stats = ref({ reportsCount: 57, companiesCount: 9, templatesCount: 10, attachmentsCount: 30 })
-const recentReports = ref([
-  { code: 'CTT2026BU01822', name: '抽地花蓝水', company: '中鼎', attachment: '抽地花蓝水.pdf', time: '2026-07-01 16:57:59' },
-  { code: '(2026)皖检 JZ 字第 00811号', name: '钢筋混凝土方形象井', company: '安徽院', attachment: '钢筋混凝土方形象井.pdf', time: '2026-07-01 16:53:56' },
-  { code: 'CTT2026BU01821', name: '阴极雕刻壁纸', company: '中鼎', attachment: '阴极雕刻壁纸.pdf', time: '2026-07-01 16:49:12' }
-])
+const recentReports = ref([])
 const isRefreshing = ref(false)
-const handleRefresh = () => {
-  // ① 开启 Loading 状态（图标旋转，按钮置灰）
-  isRefreshing.value = true
+const chartRef = ref(null)
+let chartInstance = null
+const companyListCache = ref([])
 
-  // ② 调用拉取数据的异步方法
+// 从仪表盘接口拉取数据
+async function fetchSystemData() {
+  try {
+    // 并行请求统计数据、公司列表、模板列表
+    const [statsRes, companyRes] = await Promise.all([
+      getDashboardStats().catch(() => null),
+      getCompanyList({ pageNo: 1, pageSize: 10000 }).catch(() => null)
+    ])
+
+    const companies = Array.isArray(companyRes?.data?.list) ? companyRes.data.list : []
+    companyListCache.value = companies
+    const templatesList = templateStore.templates || []
+
+    // 解析统计数据
+    const mapData = statsRes?.data?.map
+    if (mapData) {
+      stats.value.reportsCount = mapData.rc || 0
+      stats.value.companiesCount = mapData.comc || companies.length || 0
+      stats.value.templatesCount = mapData.templatec || templatesList.length || 0
+      stats.value.attachmentsCount = mapData.rpdfc || 0
+
+      // 业务趋势指标
+      const todayCount = mapData.rtc || 0
+      trendMetrics.value.todayNew = `${todayCount} 份`
+      const total = mapData.rc || 0
+      const pdfCount = mapData.rpdfc || 0
+      trendMetrics.value.pdfCoverage = total > 0 ? `${Math.round((pdfCount / total) * 100)}%` : '0%'
+
+      let topCompanyName = '暂无'
+      let topTemplateName = '暂无'
+      if (mapData.report) {
+        topCompanyName = mapData.report.companyName || '暂无'
+        topTemplateName = mapData.report.templateName || '暂无'
+      } else if (mapData.reports && mapData.reports.length > 0) {
+        topCompanyName = mapData.reports[0].companyName || '暂无'
+      }
+      trendMetrics.value.topCompany = topCompanyName
+      trendMetrics.value.topTemplate = topTemplateName
+
+      // 趋势图表数据
+      const trendResult = mapData.finalResult || []
+      const trendDates = trendResult.map(item => item.reportDateStr)
+      const trendCounts = trendResult.map(item => item.reportCount)
+      initTrendChart(trendDates, trendCounts)
+    }
+
+    // 获取最近报告
+    const recentRes = await getReportList({ pageNo: 1, pageSize: 5 }).catch(() => null)
+    const recentList = Array.isArray(recentRes?.data?.list) ? recentRes.data.list : []
+    recentReports.value = recentList.map(item => {
+      const comp = companies.find(c => c.id === item.companyId)
+      return {
+        code: item.number || '',
+        name: item.pdfName || '',
+        company: comp ? comp.name : '未知公司',
+        attachment: item.pdfName || '无',
+        time: item.createTime || ''
+      }
+    })
+  } catch (err) {
+    console.error('拉取个人数据失败:', err)
+  }
+}
+
+// 初始化趋势折线图
+function initTrendChart(dates = [], counts = []) {
+  if (!chartRef.value) return
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+  chartInstance = echarts.init(chartRef.value)
+  chartInstance.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    grid: {
+      top: 20,
+      right: 20,
+      bottom: 30,
+      left: 50
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#94a3b8', fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11 }
+    },
+    series: [{
+      type: 'line',
+      data: counts,
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { color: '#3b82f6', width: 2 },
+      itemStyle: { color: '#3b82f6' },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(59, 130, 246, 0.15)' },
+          { offset: 1, color: 'rgba(59, 130, 246, 0)' }
+        ])
+      }
+    }]
+  })
+}
+
+const handleRefresh = () => {
+  isRefreshing.value = true
   fetchSystemData().then(() => {
-    // ③ 加一个 600ms 的微小延迟（避免网络太快时动画闪现，提供更平滑的“科技感”交互体验）
     setTimeout(() => {
-      // ④ 关闭 Loading 状态（图标停止旋转，按钮恢复）
       isRefreshing.value = false
-      // ⑤ 弹出右上角成功提示
       ElMessage.success('数据同步成功')
     }, 600)
   })
 }
-const chartRef = ref(null)
+
+onMounted(() => {
+  fetchSystemData()
+})
+
+watch(
+  () => chartRef.value,
+  (el) => {
+    if (el) {
+      // chart will be initialized when data loads
+    }
+  }
+)
+
+onUnmounted(() => {
+  if (phoneTimer) clearInterval(phoneTimer)
+  if (emailTimer) clearInterval(emailTimer)
+  if (chartInstance) chartInstance.dispose()
+})
 
 </script>
 
@@ -432,19 +559,19 @@ const chartRef = ref(null)
             <!-- 下方指标平铺网格 -->
             <div class="trend-metrics-grid">
               <div class="metric-grid-item">
-                <span class="m-val text-primary font-mono">7 份</span>
+                <span class="m-val text-primary font-mono">{{ trendMetrics.todayNew }}</span>
                 <span class="m-lbl">今日新增</span>
               </div>
               <div class="metric-grid-item">
-                <span class="m-val text-primary font-mono">100%</span>
+                <span class="m-val text-primary font-mono">{{ trendMetrics.pdfCoverage }}</span>
                 <span class="m-lbl">PDF覆盖率</span>
               </div>
               <div class="metric-grid-item">
-                <span class="m-val text-primary">中鼎</span>
+                <span class="m-val text-primary">{{ trendMetrics.topCompany }}</span>
                 <span class="m-lbl">监控公司</span>
               </div>
               <div class="metric-grid-item">
-                <span class="m-val text-primary">中鼎模板</span>
+                <span class="m-val text-primary">{{ trendMetrics.topTemplate }}</span>
                 <span class="m-lbl">监控模板</span>
               </div>
             </div>

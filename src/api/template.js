@@ -1,4 +1,6 @@
 import request from '@/utils/request'
+import axios from 'axios'
+import { useUserStore } from '@/store/modules/user'
 
 /**
  * 获取模板列表
@@ -107,6 +109,27 @@ export function getDashboardStats() {
     data: {}
   })
 }
+
+/**
+ * 下载 PDF 文件（带认证，返回 Blob）
+ * @param {string} urlOrPath 完整 URL 或相对路径
+ * @returns {Promise<Blob>}
+ */
+export function downloadPdfBlob(urlOrPath) {
+  const targetUrl = urlOrPath.startsWith('http')
+    ? urlOrPath
+    : `http://192.168.1.47:8888${urlOrPath.startsWith('/') ? '' : '/'}${urlOrPath}`
+
+  return axios({
+    url: targetUrl,
+    method: 'get',
+    responseType: 'blob',
+    headers: {
+      Authorization: `Bearer ${useUserStore().token}`
+    }
+  }).then(res => res.data)
+}
+
 
 
 

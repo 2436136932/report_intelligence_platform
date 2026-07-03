@@ -136,8 +136,8 @@ const handleEdit = (row) => {
 }
 
 // 引入全局模板管理 Store
-const templateStore = useTemplateStore()
-const availableTemplates = computed(() => templateStore.templates)
+const templateStore = useTemplateStore()// 引入模板管理 Store
+const availableTemplates = computed(() => templateStore.templates)// 计算属性，获取所有模板
 
 // 模板名称与 ID 双向转换映射
 const getTemplateId = (name) => {

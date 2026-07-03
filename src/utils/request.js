@@ -29,17 +29,17 @@ service.interceptors.response.use(
   (response) => {
     // 统一处理服务器返回的结果
     const res = response.data
-    
+
     // 兼容后端不同字段命名（如 code 与 resultCode，msg 与 message / errormsg）
     const code = res.code !== undefined ? res.code : res.resultCode
     const msg = res.msg || res.message || res.errormsg || ''
-    
+
     // 如果 code 存在且不是 200 且不是 1，则判定为错误接口响应
     if (code !== undefined && code !== 200 && code !== 1 && code !== null) {
       ElMessage.error(msg || '服务器处理出错')
       return Promise.reject(new Error(msg || 'Error'))
     }
-    
+
     // 统一在返回结果对象中挂载 code 和 msg 属性，供上层业务组件通用访问
     if (res && typeof res === 'object') {
       res.code = code

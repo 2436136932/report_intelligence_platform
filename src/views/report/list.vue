@@ -6,7 +6,7 @@ import QRCode from 'qrcode'
 
 import { getCompanyList } from '@/api/company'
 import { useTemplateStore } from '@/store/modules/template'
-import { getReportList, insertReport, updateReport, deleteReport } from '@/api/template'
+import { getReportList, insertReport, updateReport, deleteReport, downloadPdfBlob } from '@/api/template'
 import request from '@/utils/request' // 步骤2：文件单独上传使用
 
 
@@ -65,27 +65,54 @@ const fileList = ref([]) // PDF文件列表，用于双向绑定上传组件
 const previewDialogVisible = ref(false)
 const previewPdfUrl = ref('')
 const previewPdfName = ref('')
+const previewBlobUrl = ref('') // blob URL 用于内存回收
+const isPreviewLoading = ref(false)  // blob 正在下载中
+const previewSourceRow = ref(null)   // 当前正在预览的行数据
+
+// 将文件路径转换为带认证的 blob URL
+async function resolvePdfBlobUrl(row) {
+  if (row.pdfUrl && row.pdfUrl.startsWith('blob:')) {
+    return row.pdfUrl
+  }
+  const targetUrl = row.pdfUrl
+  if (!targetUrl) return ''
+  try {
+    const blob = await downloadPdfBlob(targetUrl)
+    if (previewBlobUrl.value) URL.revokeObjectURL(previewBlobUrl.value)
+    previewBlobUrl.value = URL.createObjectURL(blob)
+    return previewBlobUrl.value
+  } catch {
+    return ''
+  }
+}
+
 
 // 查看报告列表中的 PDF 附件
-const handlePreviewPdf = (row) => {
-  if (!row.attachment) {
+const handlePreviewPdf = async (row) => {
+  if (!row.pdfUrl) {
     ElMessage.warning('该报告未上传 PDF 附件')
     return
   }
 
-  let url = ''
-  if (row.pdfUrl) {
-    url = row.pdfUrl
-  } else {
-    url = row.attachment.startsWith('http')
-      ? row.attachment
-      : `http://192.168.1.47:8888/uploads/${row.attachment}`
-  }
-
-  previewPdfUrl.value = url
-  previewPdfName.value = row.attachment.split('/').pop()
+  previewPdfName.value = row.attachment || 'PDF 附件'
+  previewPdfUrl.value = ''
+  previewSourceRow.value = row
+  isPreviewLoading.value = true
   previewDialogVisible.value = true
+
+  try {
+    // 通过 axios 下载 blob（携带 token），再生成 blob URL 给 iframe
+    // 这样 iframe 加载的是 blob: 协议，不会触发后端的登录验证
+    const blobUrl = await resolvePdfBlobUrl(row)
+    if (blobUrl) {
+      previewPdfUrl.value = blobUrl
+    }
+  } finally {
+    isPreviewLoading.value = false
+  }
 }
+
+
 
 // 查看上传组件列表中的 PDF 附件
 const handleFilePreview = (file) => {
@@ -105,16 +132,49 @@ const handleFilePreview = (file) => {
 }
 
 // 在预览窗口中点击下载 PDF 附件
-const handleDownloadPdfFromPreview = () => {
-  if (!previewPdfUrl.value) return
+const handleDownloadPdfFromPreview = async () => {
+  // 如果 blob 已准备好，直接下载
+  if (previewPdfUrl.value && previewPdfUrl.value.startsWith('blob:')) {
+    const link = document.createElement('a')
+    link.href = previewPdfUrl.value
+    link.download = previewPdfName.value || 'download.pdf'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    return
+  }
 
-  const link = document.createElement('a')
-  link.href = previewPdfUrl.value
-  link.download = previewPdfName.value || 'download.pdf'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  // blob 尚未准备（还在加载中或失败），直接用 pdfUrl 重新请求下载
+  const sourceUrl = previewSourceRow.value?.pdfUrl
+  if (!sourceUrl) {
+    ElMessage.warning('暂无可下载的文件')
+    return
+  }
+
+  try {
+    ElMessage.info('正在下载，请稍候…')
+    const blob = await downloadPdfBlob(sourceUrl)
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = previewPdfName.value || 'download.pdf'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(blobUrl)
+  } catch {
+    ElMessage.error('下载失败，请确认服务器文件存在')
+  }
 }
+
+
+// 关闭预览时清理 blob URL
+watch(previewDialogVisible, (val) => {
+  if (!val && previewBlobUrl.value) {
+    URL.revokeObjectURL(previewBlobUrl.value)
+    previewBlobUrl.value = ''
+  }
+})
 
 const form = reactive({
   code: '',
@@ -152,7 +212,12 @@ const fetchReportList = async () => {
     if (result && result.code === 200 && result.data) {
       const backendList = Array.isArray(result.data.list) ? result.data.list : []
       rawReportList.value = backendList.map(item => {
-        const comp = companyList.value.find(c => c.id === item.companyId)
+        // 优先按 companyId 查找公司对象
+        let comp = companyList.value.find(c => c.id === item.companyId)
+        // 如果 ID 没匹配到，尝试用公司名反向查找
+        if (!comp && item.companyName) {
+          comp = companyList.value.find(c => c.name === item.companyName)
+        }
         // 优先使用接口直接返回的 templateName，其次通过公司关联的 templateId 匹配
         let tplName = item.templateName
         if (!tplName && comp?.templateId) {
@@ -161,17 +226,100 @@ const fetchReportList = async () => {
             tplName = tpl.name
           }
         }
-        // 拼接后台返回的相对路径成为完整可预览的 URL 地址
-        const pdfUrl = item.pdfPath
-          ? (item.pdfPath.startsWith('http') ? item.pdfPath : `http://192.168.1.47:8888${item.pdfPath.startsWith('/') ? '' : '/'}${item.pdfPath}`)
-          : ''
+        // 拼接后台返回的相对路径或文件名成为完整可预览的 URL 地址
+        let pdfUrl = ''
+        if (item.pdfPath) {
+          if (item.pdfPath.startsWith('http')) {
+            pdfUrl = item.pdfPath
+          } else {
+            const slash = item.pdfPath.startsWith('/') ? '' : '/'
+            const parts = item.pdfPath.split('/')
+            parts[parts.length - 1] = encodeURIComponent(parts[parts.length - 1])
+            pdfUrl = `http://192.168.1.47:8888${slash}${parts.join('/')}`
+          }
+        } else if (item.pdfName) {
+          // 后端存储格式可能为 ".ext#uuid"（如 ".pdf#dd744b..."）
+          // 真实文件名为 "uuid.ext"（如 "dd744b....pdf"），需要转换
+          const hashFormatMatch = item.pdfName.match(/^\.([a-z0-9]+)#(.+)$/i)
+          const realFileName = hashFormatMatch
+            ? `${hashFormatMatch[2]}.${hashFormatMatch[1]}`  // uuid.ext
+            : item.pdfName
+          pdfUrl = `http://192.168.1.47:8888/uploads/${encodeURIComponent(realFileName)}`
+        }
+
+
+        // 如果有 templateFields，直接从中提取模板字段定义（避免后续通过公司映射丢失信息）
+        let extractedFields = []
+        if (Array.isArray(item.templateFields) && item.templateFields.length > 0) {
+          const tplId = item.templateFields[0].templateId
+          // console.log('[extractFields] 报告 ID:', item.id, 'tplId:', tplId, 'store templates count:', templateStore.templates.length)
+          // console.log('[extractFields] store templates:', templateStore.templates.map(t => ({ id: t.id, name: t.name, fieldsCount: t.fields?.length })))
+          
+          // 尝试从 store 找到该模板的定义
+          const tpl = templateStore.templates.find(t => Number(t.id) === Number(tplId))
+          // console.log('[extractFields] found tpl:', tpl ? tpl.name : 'NOT FOUND', 'has fields:', tpl?.fields?.length)
+          if (tpl && Array.isArray(tpl.fields) && tpl.fields.length > 0) {
+            extractedFields = tpl.fields
+          } else {
+            // 如果 store 中没有，用后端返回的原始字段定义构造临时字段
+            extractedFields = item.templateFields.map(f => ({
+              id: f.id,
+              templateId: f.templateId,
+              fieldKey: f.keyName,
+              label: f.fieldName,
+              fieldType: getEnglishFieldTypeForField(f.fieldType),
+              required: f.isrequerd === 1 || f.isrequerd === true,
+              placeholder: f.fieldPrompt || '',
+              defaultValue: f.defvalue || '',
+              options: f.optionds || (f.optiond ? JSON.parse(f.optiond) : [])
+            }))
+          }
+          // console.log('[extractFields] extractedFields count:', extractedFields.length, 'fields:', extractedFields.map(f => f.fieldKey + ':' + f.label))
+        }
         return {
           id: item.id,
           code: item.number || '',
-          name: item.pdfName || '',
-          company: comp ? comp.name : '未知公司',
+          // reportName 是报告名称；若后端未保存则降级用 pdfName（老数据）
+          // 无论哪个字段，都截掉 #uuid 这段 hash
+          name: (() => {
+            const raw = item.reportName || item.pdfName || ''
+            if (!raw) return ''
+            // 旧格式：.ext#uuid → 无可用名称
+            if (/^\.[a-z0-9]+#/i.test(raw)) return ''
+            // 新格式：原始名#uuid.ext → 截取 # 之前部分
+            const hashIdx = raw.indexOf('#')
+            const clean = hashIdx >= 0 ? raw.substring(0, hashIdx) : raw
+            // 去掉末尾 .pdf 扩展名
+            return clean.replace(/\.pdf$/i, '')
+          })(),
+
+
+          // 优先使用后端返回的公司名称
+          company: comp ? comp.name : (item.companyName || '未知公司'),
           template: tplName || '未知模板',
-          attachment: item.pdfName || (item.pdfPath ? item.pdfPath.split('/').pop() : ''),
+          rawCompanyId: item.companyId,
+          rawCompanyName: comp ? comp.name : (item.companyName || ''),
+          templateId: comp?.templateId || null,
+          extractedTemplateFields: extractedFields, // 预提取的模板字段定义
+          // attachment 用于表格显示与预览标题，显示友好文件名
+          // 后端存储格式可能为：
+          //   旧：.pdf#uuid           → 显示 'PDF 附件'
+          //   新：原始名#uuid.ext     → 截取 # 之前的部分 + 扩展名，如 '水泥.pdf'
+          attachment: (() => {
+            const n = item.pdfName || (item.pdfPath ? item.pdfPath.split('/').pop() : '')
+            if (!n) return ''
+            // 旧 hash 格式：以 .ext# 开头，例如 .pdf#uuid
+            if (/^\.[a-z]+#/i.test(n)) return 'PDF 附件'
+            // 新格式：原始名#uuid.ext → 截取 # 之前 + 末尾扩展名
+            const hashIdx = n.indexOf('#')
+            if (hashIdx >= 0) {
+              const beforeHash = n.substring(0, hashIdx)              // 如 '水泥立柱'
+              const ext = n.match(/\.([a-z0-9]+)$/i)?.[0] || '.pdf'  // 如 '.pdf'
+              return beforeHash + ext                                   // 如 '水泥立柱.pdf'
+            }
+            return n
+          })(),
+
           pdfUrl: pdfUrl,
           domain: comp ? comp.url : '',
           remark: item.remarks || '',
@@ -183,6 +331,7 @@ const fetchReportList = async () => {
           }, {}) : {}
         }
       })
+      // console.log('[fetchReportList] rawReportList dynamicFields:', rawReportList.value[0]?.dynamicFields)
       totalCount.value = result.data.total || rawReportList.value.length
     } else {
       ElMessage.error(result?.msg || '加载报告列表失败')
@@ -273,15 +422,18 @@ const drawerQrCanvasRef = ref(null) // 抽屉二维码画布引用
 
 // 编辑按钮点击事件
 const handleEdit = (row) => {
-  isEditMode.value = true // 设为编辑模式
-  editingRow.value = row  // 保存当前行数据引用
+  // console.log('[handleEdit] START')
+  // console.log('[handleEdit] row.extractedTemplateFields:', row.extractedTemplateFields?.length)
+  // console.log('[handleEdit] row.dynamicFields before:', { ...row.dynamicFields })
 
-  // 将表格行数据回显到表单字段中
+  isEditMode.value = true
+  editingRow.value = row
+
   form.code = row.code
-  form.company = row.company
+  // 优先使用原始公司名称
+  form.company = row.rawCompanyName || row.company
   form.remark = row.remark
 
-  // 填充附件
   if (row.attachment) {
     fileList.value = [{ name: row.attachment, url: row.pdfUrl }]
     uploadFile.value = { name: row.attachment }
@@ -290,10 +442,18 @@ const handleEdit = (row) => {
     uploadFile.value = null
   }
 
-  // 填充动态模板字段（根据当前绑定的公司/模板来还原字段）
+  // 填充动态模板字段
   form.dynamicFields = { ...row.dynamicFields }
 
-  isDrawerOpen.value = true // 打开抽屉
+  // console.log('[handleEdit] after assign, form.dynamicFields:', { ...form.dynamicFields })
+  // console.log('[handleEdit] isEditMode:', isEditMode.value)
+
+  isDrawerOpen.value = true
+
+  nextTick(() => {
+    // console.log('[handleEdit] nextTick, selectedTemplate.value:', selectedTemplate.value ? { name: selectedTemplate.value.name, fieldsCount: selectedTemplate.value.fields?.length } : null)
+    // console.log('[handleEdit] nextTick, form.dynamicFields:', { ...form.dynamicFields })
+  })
 }
 
 // 获取抽屉生成的防伪二维码链接
@@ -375,15 +535,43 @@ const selectedCompanyObj = computed(() => {
   return companyList.value.find(c => c.name === form.company)
 })
 
-// 所选公司对应的模板
+// 所选公司对应的模板（编辑模式优先使用预提取字段）
 const selectedTemplate = computed(() => {
+  // 编辑模式下，如果行有预提取的模板字段定义，且公司没有改变，直接使用它们构造模板对象
+  const originalCompany = editingRow.value?.rawCompanyName || editingRow.value?.company
+  if (isEditMode.value &&
+    editingRow.value?.extractedTemplateFields?.length > 0 &&
+    form.company === originalCompany) {
+    // console.log('[selectedTemplate] EDIT mode, using extracted fields, count:', editingRow.value.extractedTemplateFields.length)
+    return {
+      name: editingRow.value.template,
+      fields: editingRow.value.extractedTemplateFields,
+      isReportFields: true // 已经是该报告已存的关联字段，更新时需要传真实 ID 告诉后端去 update
+    }
+  }
   const tId = selectedCompanyObj.value?.templateId
-  if (!tId) return null
-  return templateStore.templates.find(t => t.id === tId)
+  if (!tId) {
+    // console.log('[selectedTemplate] no tId')
+    return null
+  }
+  const tpl = templateStore.templates.find(t => t.id === tId)
+  // console.log('[selectedTemplate] found tpl:', tpl?.name, 'fieldsCount:', tpl?.fields?.length)
+  if (tpl) {
+    return {
+      ...tpl,
+      isReportFields: false // 这是属于模板本身的字段，新增或第一次编辑保存时，id 必须为 null 让后端去 insert
+    }
+  }
+  return null
 })
 
 // 监听模板变化，初始化动态表单字段值
 watch(selectedTemplate, (newTpl) => {
+  // 如果是编辑模式，只有当改变了公司（即模板发生切换）时才重新初始化字段
+  if (isEditMode.value) {
+    const originalCompany = editingRow.value?.rawCompanyName || editingRow.value?.company
+    if (form.company === originalCompany) return
+  }
   if (newTpl && Array.isArray(newTpl.fields)) {
     const newFields = {}
     newTpl.fields.forEach(f => {
@@ -394,6 +582,7 @@ watch(selectedTemplate, (newTpl) => {
     form.dynamicFields = {}
   }
 })
+
 
 // 处理文件变更
 const handleFileChange = (file) => {
@@ -417,6 +606,21 @@ const parseOptions = (optionsVal) => {
   if (Array.isArray(optionsVal)) return optionsVal
   return optionsVal.split('\n').map(o => o.trim()).filter(Boolean)
 }
+
+// 将后端返回的字段类型（可能是中文或英文）统一为英文
+const getEnglishFieldTypeForField = (chineseType) => {
+  if (!chineseType) return 'text'
+  const map = { '单行文本': 'text', '多行文本': 'textarea', '数字': 'number', '日期': 'date', '日期时间': 'datetime', '附件(图片)': 'image', '下拉选择': 'select', '单选': 'radio', '多选': 'checkbox', '开关': 'switch' }
+  return map[chineseType] || chineseType || 'text'
+}
+
+// 将前端英文的字段类型转回后端接受的中文类型
+const getChineseFieldTypeForField = (englishType) => {
+  if (!englishType) return '单行文本'
+  const map = { 'text': '单行文本', 'textarea': '多行文本', 'number': '数字', 'date': '日期', 'datetime': '日期时间', 'image': '附件(图片)', 'select': '下拉选择', 'radio': '单选', 'checkbox': '多选', 'switch': '开关' }
+  return map[englishType] || englishType || '单行文本'
+}
+
 
 // 新增报告按钮触发
 const handleAdd = () => {
@@ -456,15 +660,29 @@ const handleSave = () => {
           }
         }
 
-        // 构造 TemplateField 列表
-        const templateFields = (selectedTemplate.value?.fields || []).map(f => ({
-          id: f.id,
-          templateId: f.templateId,
-          fieldName: f.label,
-          keyName: f.fieldKey,
-          fieldType: f.fieldType,
-          fieldValue: String(form.dynamicFields[f.fieldKey] || '')
-        }))
+        // 构造 TemplateField 列表，包含全部后台所需属性且转换为对应的中文类型
+        const templateFields = (selectedTemplate.value?.fields || []).map(f => {
+          const finalOptions = Array.isArray(f.options)
+            ? f.options
+            : (typeof f.options === 'string' && f.options ? f.options.split('\n').map(o => o.trim()).filter(Boolean) : [])
+
+          const targetId = f.id
+
+          return {
+            id: (!targetId || targetId > 1000000000) ? null : targetId,
+            templateId: f.templateId,
+            fieldName: f.label || '',
+            keyName: f.fieldKey || '',
+            fieldType: getChineseFieldTypeForField(f.fieldType),
+            fieldValue: String(form.dynamicFields[f.fieldKey] || ''),
+            isrequerd: f.required ? 1 : 2,
+            fieldPrompt: f.placeholder || null,
+            defvalue: f.defaultValue || null,
+            optionds: finalOptions,
+            optiond: JSON.stringify(finalOptions)
+          }
+        })
+
 
         // 构造 FormData：所有字段 + 文件一起提交
         const formData = new FormData()
@@ -481,7 +699,31 @@ const handleSave = () => {
         formData.append('remarks', form.remark || '')
         formData.append('reportName', reportName)
         formData.append('url', selectedCompanyObj.value?.url || '')
+        if (uploadFile.value instanceof File) {
+          formData.append('file', uploadFile.value)
+        }
+
+
+        // 保留 JSON 字符串兼容字段（部分后端版本会解析此字段）
         formData.append('templateField', JSON.stringify(templateFields))
+
+        // 同时以 indexed 索引格式逐字段 append，让 Spring MVC 能直接绑定
+        // 到 @ModelAttribute Report 里的 List<TemplateField> templateFields
+        templateFields.forEach((f, idx) => {
+          const p = `templateFields[${idx}]`
+          if (f.id != null) formData.append(`${p}.id`, String(f.id))
+          if (f.templateId != null) formData.append(`${p}.templateId`, String(f.templateId))
+          formData.append(`${p}.fieldName`, f.fieldName || '')
+          formData.append(`${p}.keyName`, f.keyName || '')
+          formData.append(`${p}.fieldType`, f.fieldType || '')
+          formData.append(`${p}.fieldValue`, f.fieldValue || '')
+          formData.append(`${p}.isrequerd`, String(f.isrequerd ?? 2))
+          if (f.fieldPrompt) formData.append(`${p}.fieldPrompt`, f.fieldPrompt)
+          if (f.defvalue) formData.append(`${p}.defvalue`, f.defvalue)
+          if (f.optiond) formData.append(`${p}.optiond`, f.optiond)
+            ; (f.optionds || []).forEach(opt => formData.append(`${p}.optionds`, opt))
+        })
+
 
         let result
         if (isEditMode.value) {
